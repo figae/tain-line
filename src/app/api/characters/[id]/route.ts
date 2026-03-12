@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import type { NewCharacter } from "@/db/schema";
+
+function safeParseJson<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const charId = parseInt(id);
+  const charId = parseInt(id, 10);
+  if (isNaN(charId)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
 
   const [character] = await db
     .select()
@@ -18,10 +31,8 @@ export async function GET(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  // Fetch related data in parallel
   const [properties, groups, familyFrom, familyTo, events, source] =
     await Promise.all([
-      // Properties (weapons, colors, animals …)
       db
         .select({
           id: schema.characterProperties.id,
@@ -38,7 +49,6 @@ export async function GET(
         )
         .where(eq(schema.characterProperties.characterId, charId)),
 
-      // Groups
       db
         .select({ id: schema.groups.id, name: schema.groups.name })
         .from(schema.characterGroups)
@@ -48,7 +58,6 @@ export async function GET(
         )
         .where(eq(schema.characterGroups.characterId, charId)),
 
-      // Family: this character IS the parent/source
       db
         .select({
           id: schema.familyRelations.id,
@@ -64,7 +73,6 @@ export async function GET(
         )
         .where(eq(schema.familyRelations.fromCharacterId, charId)),
 
-      // Family: this character IS the child/target
       db
         .select({
           id: schema.familyRelations.id,
@@ -80,7 +88,6 @@ export async function GET(
         )
         .where(eq(schema.familyRelations.toCharacterId, charId)),
 
-      // Events this character participated in
       db
         .select({
           eventId: schema.events.id,
@@ -95,7 +102,6 @@ export async function GET(
         )
         .where(eq(schema.eventCharacters.characterId, charId)),
 
-      // Source
       character.sourceId
         ? db
             .select()
@@ -106,14 +112,11 @@ export async function GET(
 
   return NextResponse.json({
     ...character,
-    altNames: character.altNames ? JSON.parse(character.altNames) : [],
+    altNames: safeParseJson<string[]>(character.altNames, []),
     source: source[0] ?? null,
     properties,
     groups,
-    family: {
-      from: familyFrom,
-      to: familyTo,
-    },
+    family: { from: familyFrom, to: familyTo },
     events,
   });
 }
@@ -123,29 +126,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const charId = parseInt(id);
-  const body = await req.json();
-
-  const updates: Record<string, unknown> = {};
-  const allowed = [
-    "name",
-    "altNames",
-    "gender",
-    "description",
-    "epithet",
-    "isDeity",
-    "isDead",
-    "sourceId",
-  ];
-  for (const key of allowed) {
-    if (key in body) {
-      if (key === "altNames") {
-        updates[key] = JSON.stringify(body[key]);
-      } else {
-        updates[key] = body[key];
-      }
-    }
+  const charId = parseInt(id, 10);
+  if (isNaN(charId)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
+
+  const body = await req.json();
+  const updates: Partial<NewCharacter> = {};
+
+  if (typeof body.name === "string")        updates.name        = body.name;
+  if (Array.isArray(body.altNames))         updates.altNames    = JSON.stringify(body.altNames);
+  if (typeof body.gender === "string")      updates.gender      = body.gender;
+  if (typeof body.description === "string") updates.description = body.description;
+  if (typeof body.epithet === "string")     updates.epithet     = body.epithet;
+  if (typeof body.isDeity === "boolean")    updates.isDeity     = body.isDeity;
+  if (typeof body.isDead === "boolean")     updates.isDead      = body.isDead;
+  if (typeof body.sourceId === "number")    updates.sourceId    = body.sourceId;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "no valid fields" }, { status: 400 });
@@ -156,6 +152,10 @@ export async function PUT(
     .set(updates)
     .where(eq(schema.characters.id, charId))
     .returning();
+
+  if (!result[0]) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
 
   return NextResponse.json(result[0]);
 }

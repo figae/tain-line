@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { like, or, sql } from "drizzle-orm";
+
+function safeParseJson<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
-  const groupId = searchParams.get("group");
 
-  let query = db
+  const chars = await db
     .select({
       id: schema.characters.id,
       name: schema.characters.name,
@@ -20,22 +27,15 @@ export async function GET(req: NextRequest) {
     })
     .from(schema.characters);
 
-  const chars = await query;
-
-  // Filter by search query
   let filtered = chars;
   if (q) {
     const lower = q.toLowerCase();
-    filtered = chars.filter(
-      (c) =>
-        c.name.toLowerCase().includes(lower) ||
-        (c.epithet?.toLowerCase().includes(lower) ?? false) ||
-        (c.altNames
-          ? JSON.parse(c.altNames).some((a: string) =>
-              a.toLowerCase().includes(lower)
-            )
-          : false)
-    );
+    filtered = chars.filter((c) => {
+      if (c.name.toLowerCase().includes(lower)) return true;
+      if (c.epithet?.toLowerCase().includes(lower)) return true;
+      const altNames = safeParseJson<string[]>(c.altNames, []);
+      return altNames.some((a) => a.toLowerCase().includes(lower));
+    });
   }
 
   return NextResponse.json(filtered);
@@ -43,10 +43,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, altNames, gender, description, epithet, isDeity, sourceId } =
-    body;
+  const { name, altNames, gender, description, epithet, isDeity, sourceId } = body;
 
-  if (!name) {
+  if (!name || typeof name !== "string") {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 

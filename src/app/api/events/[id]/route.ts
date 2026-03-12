@@ -7,7 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const eventId = parseInt(id);
+  const eventId = parseInt(id, 10);
+  if (isNaN(eventId)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
 
   const [event] = await db
     .select()
@@ -20,7 +23,6 @@ export async function GET(
 
   const [characters, places, mustBeBefore, mustBeAfter, source] =
     await Promise.all([
-      // Characters in this event
       db
         .select({
           characterId: schema.characters.id,
@@ -35,7 +37,6 @@ export async function GET(
         )
         .where(eq(schema.eventCharacters.eventId, eventId)),
 
-      // Places
       db
         .select({
           placeId: schema.places.id,
@@ -49,7 +50,6 @@ export async function GET(
         )
         .where(eq(schema.eventPlaces.eventId, eventId)),
 
-      // Events that MUST come before this one
       db
         .select({
           id: schema.eventDependencies.id,
@@ -65,7 +65,6 @@ export async function GET(
         )
         .where(eq(schema.eventDependencies.afterEventId, eventId)),
 
-      // Events that MUST come after this one
       db
         .select({
           id: schema.eventDependencies.id,
@@ -81,7 +80,6 @@ export async function GET(
         )
         .where(eq(schema.eventDependencies.beforeEventId, eventId)),
 
-      // Source
       event.sourceId
         ? db.select().from(schema.sources).where(eq(schema.sources.id, event.sourceId))
         : Promise.resolve([]),
