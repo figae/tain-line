@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  /* Celtic colour palette */
+  --stone:    #1a1814;
+  --bark:     #241f18;
+  --peat:     #2d2720;
+  --moss:     #3d4a2e;
+  --fern:     #4e6640;
+  --sage:     #6b8a55;
+  --gold:     #c8913a;
+  --amber:    #e0a84a;
+  --cream:    #f0e6c8;
+  --parchment:#e8d9aa;
+  --mist:     #b8c4a8;
+  --slate:    #7a8a7a;
+  --blood:    #7a2020;
+  --rust:     #8b3a2a;
+  --sky:      #2a4a5e;
+  --ocean:    #1e3a4a;
+
+  --bg:       var(--stone);
+  --surface:  var(--bark);
+  --surface2: var(--peat);
+  --border:   rgba(200,145,58,0.2);
+  --border-bright: rgba(200,145,58,0.5);
+  --text:     var(--cream);
+  --text-muted: var(--mist);
+  --accent:   var(--gold);
+  --accent2:  var(--amber);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--stone);
+  color: var(--cream);
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  letter-spacing: 0.05em;
+  color: var(--amber);
+}
+
+/* ── Celtic knotwork border utility ─────────────────────────────────── */
+.celtic-border {
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.celtic-border::before,
+.celtic-border::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--gold);
+  border-style: solid;
+}
+
+.celtic-border::before {
+  top: -2px;
+  left: -2px;
+  border-width: 2px 0 0 2px;
+}
+
+.celtic-border::after {
+  bottom: -2px;
+  right: -2px;
+  border-width: 0 2px 2px 0;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--moss);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fern);
+}
+
+/* ── Selection ───────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(200,145,58,0.3);
+  color: var(--cream);
+}
+
+/* ── Animated shimmer for loading ────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bark) 25%,
+    var(--peat) 50%,
+    var(--bark) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* ── Rune divider ────────────────────────────────────────────────────── */
+.rune-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--slate);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+}
+
+.rune-divider::before,
+.rune-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+}
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  border-color: var(--border-bright);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* ── Badge ───────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Cycle colours ───────────────────────────────────────────────────── */
+.cycle-mythological { background: rgba(122,32,32,0.25); color: #e87878; border: 1px solid rgba(122,32,32,0.5); }
+.cycle-ulster       { background: rgba(42,74,94,0.25);  color: #78b4e8; border: 1px solid rgba(42,74,94,0.5); }
+.cycle-fenian       { background: rgba(61,74,46,0.25);  color: #a0c878; border: 1px solid rgba(61,74,46,0.5); }
+.cycle-kings        { background: rgba(200,145,58,0.15); color: var(--amber); border: 1px solid rgba(200,145,58,0.4); }
+.cycle-other        { background: rgba(122,138,122,0.15); color: var(--mist); border: 1px solid rgba(122,138,122,0.3); }
+
+/* ── Gender icon colours ─────────────────────────────────────────────── */
+.gender-male   { color: #78b4e8; }
+.gender-female { color: #e878b4; }
+.gender-other  { color: var(--amber); }
+
+/* ── Focus ───────────────────────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  outline: 1px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* ── Triskelion spinner ──────────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}

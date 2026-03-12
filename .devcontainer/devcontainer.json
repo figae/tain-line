@@ -1,0 +1,43 @@
+{
+  "name": "Tain Line — Celtic Mythology",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+
+  // Forward the Next.js dev server port
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js Dev Server",
+      "onAutoForward": "openPreview"
+    }
+  },
+
+  // On first container creation: install deps on the correct platform,
+  // then create/update the SQLite schema and seed initial data
+  "postCreateCommand": "npm install && npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts",
+
+  // On every container start: keep deps in sync (handles platform rebuilds)
+  "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "PKief.material-icon-theme"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "tailwindCSS.experimental.configFile": null
+      }
+    }
+  },
+
+  // Persist node_modules and the SQLite database across rebuilds
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/tain-line.db,type=volume"
+  ]
+}
