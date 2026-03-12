@@ -5,8 +5,10 @@
  */
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "tain-line.db");
+const DB_PATH = path.join(process.cwd(), "data", "tain-line.db");
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const sqlite = new Database(DB_PATH);
 sqlite.pragma("foreign_keys = ON");
 

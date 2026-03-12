@@ -38,6 +38,6 @@
   // Persist node_modules and the SQLite database across rebuilds
   "mounts": [
     "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
-    "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/tain-line.db,type=volume"
+    "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/data,type=volume"
   ]
 }
