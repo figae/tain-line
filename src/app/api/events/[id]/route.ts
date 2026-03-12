@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 export async function GET(
   _req: NextRequest,
@@ -21,76 +21,78 @@ export async function GET(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  const [characters, places, mustBeBefore, mustBeAfter, source] =
-    await Promise.all([
-      db
-        .select({
-          characterId: schema.characters.id,
-          name: schema.characters.name,
-          role: schema.eventCharacters.role,
-          notes: schema.eventCharacters.notes,
-        })
-        .from(schema.eventCharacters)
-        .innerJoin(
-          schema.characters,
-          eq(schema.eventCharacters.characterId, schema.characters.id)
-        )
-        .where(eq(schema.eventCharacters.eventId, eventId)),
+  const [characters, places, relations, children, source] = await Promise.all([
+    db
+      .select({
+        characterId: schema.characters.id,
+        name: schema.characters.name,
+        role: schema.eventCharacters.role,
+        notes: schema.eventCharacters.notes,
+      })
+      .from(schema.eventCharacters)
+      .innerJoin(schema.characters, eq(schema.eventCharacters.characterId, schema.characters.id))
+      .where(eq(schema.eventCharacters.eventId, eventId)),
 
-      db
-        .select({
-          placeId: schema.places.id,
-          name: schema.places.name,
-          type: schema.places.type,
-        })
-        .from(schema.eventPlaces)
-        .innerJoin(
-          schema.places,
-          eq(schema.eventPlaces.placeId, schema.places.id)
-        )
-        .where(eq(schema.eventPlaces.eventId, eventId)),
+    db
+      .select({
+        placeId: schema.places.id,
+        name: schema.places.name,
+        type: schema.places.type,
+      })
+      .from(schema.eventPlaces)
+      .innerJoin(schema.places, eq(schema.eventPlaces.placeId, schema.places.id))
+      .where(eq(schema.eventPlaces.eventId, eventId)),
 
-      db
-        .select({
-          id: schema.eventDependencies.id,
-          beforeEventId: schema.eventDependencies.beforeEventId,
-          beforeEventName: schema.events.name,
-          reason: schema.eventDependencies.reason,
-          confidence: schema.eventDependencies.confidence,
-        })
-        .from(schema.eventDependencies)
-        .innerJoin(
-          schema.events,
-          eq(schema.eventDependencies.beforeEventId, schema.events.id)
+    // All relations where this event is either from or to
+    db
+      .select({
+        id: schema.eventRelations.id,
+        fromEventId: schema.eventRelations.fromEventId,
+        toEventId: schema.eventRelations.toEventId,
+        relationType: schema.eventRelations.relationType,
+        confidence: schema.eventRelations.confidence,
+        reason: schema.eventRelations.reason,
+      })
+      .from(schema.eventRelations)
+      .where(
+        or(
+          eq(schema.eventRelations.fromEventId, eventId),
+          eq(schema.eventRelations.toEventId, eventId)
         )
-        .where(eq(schema.eventDependencies.afterEventId, eventId)),
+      ),
 
-      db
-        .select({
-          id: schema.eventDependencies.id,
-          afterEventId: schema.eventDependencies.afterEventId,
-          afterEventName: schema.events.name,
-          reason: schema.eventDependencies.reason,
-          confidence: schema.eventDependencies.confidence,
-        })
-        .from(schema.eventDependencies)
-        .innerJoin(
-          schema.events,
-          eq(schema.eventDependencies.afterEventId, schema.events.id)
-        )
-        .where(eq(schema.eventDependencies.beforeEventId, eventId)),
+    // Child events (events whose parent is this event)
+    db
+      .select({
+        id: schema.events.id,
+        name: schema.events.name,
+        eventType: schema.events.eventType,
+      })
+      .from(schema.events)
+      .where(eq(schema.events.parentEventId, eventId)),
 
-      event.sourceId
-        ? db.select().from(schema.sources).where(eq(schema.sources.id, event.sourceId))
-        : Promise.resolve([]),
-    ]);
+    event.sourceId
+      ? db.select().from(schema.sources).where(eq(schema.sources.id, event.sourceId))
+      : Promise.resolve([]),
+  ]);
+
+  // Split relations into "before this" / "after this" / "other" for convenience
+  const before = relations.filter(
+    (r) => r.toEventId === eventId && ["before", "causes", "meets"].includes(r.relationType ?? "")
+  );
+  const after = relations.filter(
+    (r) => r.fromEventId === eventId && ["before", "causes", "meets"].includes(r.relationType ?? "")
+  );
+  const other = relations.filter(
+    (r) => ["contains", "parallel"].includes(r.relationType ?? "")
+  );
 
   return NextResponse.json({
     ...event,
     source: source[0] ?? null,
     characters,
     places,
-    mustBeBefore,
-    mustBeAfter,
+    children,
+    relations: { before, after, other, all: relations },
   });
 }
