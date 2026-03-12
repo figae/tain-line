@@ -94,6 +94,42 @@ export default function TimelinePage() {
   return (
     <div>
       <div style={{ marginBottom: "1.5rem" }}>
+        {/* Tab bar */}
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
+          <div
+            style={{
+              padding: "6px 16px",
+              background: "rgba(200,145,58,0.15)",
+              color: "var(--amber)",
+              border: "1px solid rgba(200,145,58,0.5)",
+              borderRadius: "2px",
+              fontFamily: "Cinzel, serif",
+              fontSize: "0.75rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Liste
+          </div>
+          <Link
+            href="/timeline/graph"
+            style={{
+              padding: "6px 16px",
+              background: "var(--peat)",
+              color: "var(--slate)",
+              border: "1px solid var(--border)",
+              borderRadius: "2px",
+              textDecoration: "none",
+              fontFamily: "Cinzel, serif",
+              fontSize: "0.75rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Graph
+          </Link>
+        </div>
+
         <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Timeline</h1>
         <p style={{ color: "var(--mist)", margin: "0 0 1rem" }}>
           Topologisch geordnete Ereignisse — abgeleitet aus logischen Abhängigkeiten zwischen den Mythen.
