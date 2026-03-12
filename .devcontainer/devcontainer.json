@@ -56,9 +56,11 @@
     }
   },
 
-  // Persist node_modules and the SQLite database across rebuilds
+  // Persist the SQLite database across rebuilds
+  // (node_modules lives in /workspaces which Codespaces already persists)
   "mounts": [
-    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
     "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/data,type=volume"
-  ]
+  ],
+
+  "remoteUser": "node"
 }
