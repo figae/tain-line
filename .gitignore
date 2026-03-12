@@ -40,5 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# SQLite database (tracked in development for convenience)
+# SQLite WAL journal files (generated at runtime, not needed in git)
+*.db-shm
+*.db-wal
+
+# SQLite database (tracked in repo so Codespaces starts with seed data)
+# To exclude: uncomment the line below
 # tain-line.db
