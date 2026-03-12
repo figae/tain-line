@@ -13,7 +13,7 @@
 
   // On first container creation: install deps on the correct platform,
   // then create/update the SQLite schema and seed initial data
-  "postCreateCommand": "npm install && npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts",
+  "postCreateCommand": "npm install && npm run db:migrate && npm run db:seed",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
