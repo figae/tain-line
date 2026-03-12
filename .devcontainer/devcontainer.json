@@ -21,9 +21,30 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        // Linting & formatting
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
+
+        // TypeScript & React
+        "yoavbls.pretty-ts-errors",
+        "dsznajder.es7-react-js-snippets",
+        "formulahendry.auto-rename-tag",
+
+        // Tailwind
         "bradlc.vscode-tailwindcss",
+
+        // SQLite
+        "qwtel.sqlite-viewer",
+
+        // Git
+        "eamodio.gitlens",
+
+        // DX
+        "usernamehw.errorlens",
+        "christian-kohler.path-intellisense",
+        "mikestead.dotenv",
+
+        // UI
         "PKief.material-icon-theme"
       ],
       "settings": {
