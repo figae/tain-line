@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS family_relations (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
   from_character_id   INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
   to_character_id     INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  relation_type       TEXT NOT NULL CHECK(relation_type IN ('father','mother','child','sibling','spouse','foster_parent','foster_child','other')),
+  relation_type       TEXT NOT NULL CHECK(relation_type IN ('father','mother','child','sibling','half_sibling','spouse','lover','foster_parent','foster_child','uncle','aunt','nephew','niece','grandparent','grandchild','aspect','other')),
   notes               TEXT,
   source_id           INTEGER REFERENCES sources(id)
 );

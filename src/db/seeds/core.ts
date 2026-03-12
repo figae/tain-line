@@ -173,7 +173,7 @@ export const seed: Seed["seed"] = (db) => {
   ).lastInsertRowid as number;
   insertCG.run(cian, tuatha, lgeSrc);
   insertRel.run(cian, lugh, "father", "Lugh's father from the Tuatha Dé Danann side", lgeSrc);
-  insertRel.run(balor, lugh, "other", "Maternal grandfather — Ethniu (Balor's daughter) was Lugh's mother", cmtSrc);
+  insertRel.run(balor, lugh, "grandparent", "Maternal grandfather — Ethniu (Balor's daughter) was Lugh's mother", cmtSrc);
 
   // Cú Chulainn
   const cuChulainn = insertChar.run(

@@ -80,7 +80,16 @@ export const familyRelations = sqliteTable("family_relations", {
   fromCharacterId: integer("from_character_id").notNull().references(() => characters.id, { onDelete: "cascade" }),
   toCharacterId: integer("to_character_id").notNull().references(() => characters.id, { onDelete: "cascade" }),
   relationType: text("relation_type", {
-    enum: ["father", "mother", "child", "sibling", "spouse", "foster_parent", "foster_child", "other"],
+    enum: [
+      "father", "mother", "child",
+      "sibling", "half_sibling",
+      "spouse", "lover",
+      "foster_parent", "foster_child",
+      "uncle", "aunt", "nephew", "niece",
+      "grandparent", "grandchild",
+      "aspect",   // divine being in multiple simultaneous incarnations
+      "other",
+    ],
   }).notNull(),
   notes: text("notes"),
   sourceId: integer("source_id").references(() => sources.id),

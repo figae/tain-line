@@ -151,10 +151,11 @@ export const seed: Seed["seed"] = (db) => {
   insertCG.run(cian, tuatha, lge);
 
   const ethniu = insertChar.run(
-    "Ethniu", JSON.stringify(["Eithne", "Ethnea"]),
+    "Ethniu I (Daughter of Balor)",
+    JSON.stringify(["Eithne", "Ethniu Óg", "Ethniu the Imprisoned"]),
     "female",
-    "Daughter of Balor, mother of Lugh. Balor imprisoned her in a crystal tower on Tory Island after a prophecy that her son would kill him.",
-    null, 1, cmtMs
+    "First incarnation of Ethniu. Daughter of Balor, mother of Lugh. Balor imprisoned her in a glass tower on Tory Island after a druidic prophecy that her son would kill him. Despite the captivity Cian reached her disguised as a woman; their son Lugh fulfilled the prophecy. She is the bridge between the divine Tuatha Dé and the Fomorian lineages.",
+    "The Imprisoned", 1, cmtMs
   ).lastInsertRowid as number;
   insertCG.run(ethniu, fomor, cmtMs);
 
@@ -286,21 +287,91 @@ export const seed: Seed["seed"] = (db) => {
     null, 1, cmtMs
   ).lastInsertRowid as number;
 
-  // ── FAMILY RELATIONS ─────────────────────────────────────────────────────
-  insertFam.run(elathan, bres, "father", "Elathan came from the sea and fathered Bres on Ériu", cmtMs);
-  insertFam.run(eriu, bres, "mother", "Ériu bore Bres after her union with the Fomorian Elathan", cmtMs);
-  insertFam.run(cian, lugh, "father", "Cian is Lugh's father from the Tuatha Dé side", lge);
-  insertFam.run(ethniu, lugh, "mother", "Ethniu bore Lugh after Cian reached her in Balor's tower", cmtMs);
-  insertFam.run(balor, ethniu, "father", "Balor imprisoned his daughter to prevent the prophecy", cmtMs);
-  insertFam.run(balor, lugh, "other", "Maternal grandfather — killed by Lugh, fulfilling the prophecy", cmtMs);
-  insertFam.run(dianCecht, cian, "father", "Dian Cécht is father of Cian, making him Lugh's paternal grandfather", lge);
-  insertFam.run(dianCecht, miach, "father", "Dian Cécht killed his own son out of jealousy", cmtMs);
-  insertFam.run(dianCecht, airmed, "father", null, cmtMs);
-  insertFam.run(miach, airmed, "sibling", "Brother and sister", cmtMs);
-  insertFam.run(bres, ruadan, "father", "Bres sent his own son as a spy", cmtMs);
-  insertFam.run(tailtiu, lugh, "foster_parent", "Tailtiu raised Lugh; he established Lughnasadh games in her memory", lge);
+  const brig = insertChar.run(
+    "Bríg", JSON.stringify(["Bríg inghen Dagda", "Brigid", "Bríd", "Brig"]),
+    "female",
+    "Daughter of the Dagda, wife of Bres, mother of Ruadán. Goddess of healing, poetry, and smithcraft. When Ruadán was killed by Goibniu she wept and keened — the first keening (caoineadh) ever heard in Ireland. Her three aspects cover the three sacred arts: poetry (filiocht), healing (leigheas), and metalwork (gabháltas). She is the most beloved goddess of the Tuatha Dé Danann. Her flame was kept burning at Kildare into the Christian era, where she became St Brigid.",
+    "Daughter of the Dagda", 1, cmtMs
+  ).lastInsertRowid as number;
+  insertCG.run(brig, tuatha, cmtMs);
+  insertProp.run(brig, "skill", "Poetry (filiocht)", "Patroness of poets — one of her three divine crafts", cmtMs);
+  insertProp.run(brig, "skill", "Healing (leigheas)", "Patroness of healing — one of her three divine crafts", cmtMs);
+  insertProp.run(brig, "skill", "Smithcraft (gabháltas)", "Patroness of metalwork — one of her three divine crafts", cmtMs);
+  insertProp.run(brig, "attribute", "First Keening", "Her grief for Ruadán created the tradition of caoineadh (keening for the dead)", cmtMs);
 
-  // Character properties
+  // ── THREE INCARNATIONS OF ETHNIU ──────────────────────────────────────────
+  // The name Eithne/Ethniu recurs across cycles as three distinct mythological
+  // figures linked by name, archetype (the imprisoned or displaced woman), and
+  // ultimate divine descent. Each is an independent character but all three are
+  // connected as aspects of the same divine essence.
+
+  const ethniuII = insertChar.run(
+    "Ethniu II (Daughter of Elcmar)",
+    JSON.stringify(["Eithne inghen Elcmar", "Eithne of the Brú", "Eithne the Pure"]),
+    "female",
+    "Second incarnation of Ethniu. Daughter of Elcmar, the lord of Brú na Bóinne, and beloved of Oengus mac Óg (who tricked Elcmar out of his own síde). She is described as a soul without original sin, nourished only by the milk of a sacred cow from India — she cannot eat ordinary food. She dwells at the Brú na Bóinne (Newgrange) and later encounters St Patrick's missionaries, representing the meeting-point of the old gods and the new faith. She embodies purity and the sanctity of place.",
+    "The Pure Soul", 1, lge
+  ).lastInsertRowid as number;
+  insertCG.run(ethniuII, tuatha, lge);
+  insertProp.run(ethniuII, "attribute", "Cannot eat earthly food", "Nourished only by milk from a sacred cow — she has no bodily sin", lge);
+  insertProp.run(ethniuII, "place", "Brú na Bóinne", "Dwells at the great síde of Newgrange", lge);
+
+  const ethniuIII = insertChar.run(
+    "Ethniu III (Daughter of Fionn)",
+    JSON.stringify(["Eithne inghen Finn", "Eithne of the Fianna", "Oisín's sister"]),
+    "female",
+    "Third incarnation of Ethniu. Daughter of Fionn mac Cumhaill, sister of Oisín. She appears in the Fenian cycle as a woman of supernatural beauty connected to the fate of the Fianna. Like her earlier aspects she is associated with displacement and transition — between worlds, between eras, between the time of the gods and the time of heroes. Her name links the three great ages of Irish myth: the Mythological, the Ulster, and the Fenian cycles.",
+    "Daughter of Fionn", 0, lge
+  ).lastInsertRowid as number;
+
+  // ── FAMILY RELATIONS ─────────────────────────────────────────────────────
+
+  // ── Parentage ────────────────────────────────────────────────────────────
+  insertFam.run(elathan, bres,    "father",       "Elathan came from the sea and fathered Bres on Ériu", cmtMs);
+  insertFam.run(eriu,    bres,    "mother",       "Ériu bore Bres after her union with the Fomorian Elathan", cmtMs);
+  insertFam.run(cian,    lugh,    "father",       "Cian is Lugh's father from the Tuatha Dé side", lge);
+  insertFam.run(ethniu,  lugh,    "mother",       "Ethniu I bore Lugh after Cian reached her in Balor's tower", cmtMs);
+  insertFam.run(balor,   ethniu,  "father",       "Balor imprisoned his daughter to prevent the prophecy", cmtMs);
+  insertFam.run(dianCecht,cian,   "father",       "Dian Cécht is father of Cian", lge);
+  insertFam.run(dianCecht,miach,  "father",       "Dian Cécht later kills his own son out of jealousy", cmtMs);
+  insertFam.run(dianCecht,airmed, "father",       null, cmtMs);
+  insertFam.run(dagda,   brig,    "father",       "Bríg is daughter of the Dagda", cmtMs);
+  insertFam.run(bres,    ruadan,  "father",       "Bres sent his own son as a spy to the smiths", cmtMs);
+  insertFam.run(brig,    ruadan,  "mother",       "Bríg mourned Ruadán — the first keening in Ireland", cmtMs);
+
+  // ── Siblings ─────────────────────────────────────────────────────────────
+  insertFam.run(miach,   airmed,  "sibling",      "Brother and sister, both children of Dian Cécht", cmtMs);
+  insertFam.run(cian,    miach,   "sibling",      "Both children of Dian Cécht — Cian's brother", lge);
+  insertFam.run(cian,    airmed,  "sibling",      "Both children of Dian Cécht — Cian's sister", lge);
+
+  // ── Grandparent / Grandchild ──────────────────────────────────────────────
+  insertFam.run(balor,    lugh,   "grandparent",  "Maternal grandfather — killed by his own grandson, as the prophecy foretold", cmtMs);
+  insertFam.run(dianCecht,lugh,   "grandparent",  "Paternal grandfather — Dian Cécht is father of Cian, who is father of Lugh", lge);
+  insertFam.run(lugh,    balor,   "grandchild",   "Lugh is Balor's grandson — fulfils the prophecy by killing him", cmtMs);
+  insertFam.run(lugh,    dianCecht,"grandchild",  "Lugh is Dian Cécht's grandson through Cian", lge);
+
+  // ── Uncle / Aunt ──────────────────────────────────────────────────────────
+  insertFam.run(miach,   lugh,    "uncle",        "Miach is Cian's brother — uncle of Lugh", lge);
+  insertFam.run(airmed,  lugh,    "aunt",         "Airmed is Cian's sister — aunt of Lugh", lge);
+
+  // ── Lovers ───────────────────────────────────────────────────────────────
+  insertFam.run(elathan, eriu,    "lover",        "Elathan came from the sea to lie with Ériu — not a marriage but a divine union", cmtMs);
+  insertFam.run(cian,    ethniu,  "lover",        "Cian reached Ethniu in disguise — their union produced Lugh. Not a marriage.", cmtMs);
+  insertFam.run(dagda,   morrigan,"lover",        "The Dagda met the Morrígan at the ford of Unshin on Samhain — she promised her aid in exchange", cmtMs);
+
+  // ── Spouses ───────────────────────────────────────────────────────────────
+  insertFam.run(bres,    brig,    "spouse",       "Bres married Bríg, daughter of the Dagda — the union was part of the political settlement", cmtMs);
+
+  // ── Foster-parent ─────────────────────────────────────────────────────────
+  insertFam.run(tailtiu, lugh,    "foster_parent","Tailtiu cleared the forests to make farmland and died of exhaustion; Lugh established the Lughnasadh games in her memory", lge);
+
+  // ── Aspects — the Three Ethnius ───────────────────────────────────────────
+  // Each pair is linked as mutual aspects of the same divine name/essence.
+  insertFam.run(ethniu,  ethniuII, "aspect",      "Ethniu I and Ethniu II share the same divine name and archetype of the displaced woman across different mythological contexts", lge);
+  insertFam.run(ethniu,  ethniuIII,"aspect",      "Ethniu I and Ethniu III span the Mythological and Fenian cycles — the same essence in a later age", lge);
+  insertFam.run(ethniuII,ethniuIII,"aspect",      "Ethniu II and Ethniu III are the middle and final expressions of the threefold Ethniu", lge);
+
+  // ── Properties ───────────────────────────────────────────────────────────
   insertProp.run(dianCecht, "skill", "Silver arm crafting", "Created a fully functional silver arm for Nuada", cmtMs);
   insertProp.run(ruadan, "attribute", "First keened death", "His mother Bríg's mourning was the first keening in Ireland", cmtMs);
 
@@ -341,29 +412,32 @@ export const seed: Seed["seed"] = (db) => {
   ).lastInsertRowid as number;
 
   // ── LIFECYCLE EVENTS ──────────────────────────────────────────────────────
-  // Create birth/death event pairs for all 21 characters.
+  // Create birth/death event pairs for all 25 characters.
   const LC = {
-    nuada:    mkLifecycle(stmts, { characterId: nuada,    name: "Nuada",    cycle: "mythological", sourceId: cmtMs }),
-    bres:     mkLifecycle(stmts, { characterId: bres,     name: "Bres",     cycle: "mythological", sourceId: cmtMs }),
-    elathan:  mkLifecycle(stmts, { characterId: elathan,  name: "Elathan",  cycle: "mythological", sourceId: cmtMs }),
-    eriu:     mkLifecycle(stmts, { characterId: eriu,     name: "Ériu",     cycle: "mythological", sourceId: lge  }),
-    lugh:     mkLifecycle(stmts, { characterId: lugh,     name: "Lugh",     cycle: "mythological", sourceId: cmtMs }),
-    cian:     mkLifecycle(stmts, { characterId: cian,     name: "Cian",     cycle: "mythological", sourceId: lge  }),
-    ethniu:   mkLifecycle(stmts, { characterId: ethniu,   name: "Ethniu",   cycle: "mythological", sourceId: cmtMs }),
-    balor:    mkLifecycle(stmts, { characterId: balor,    name: "Balor",    cycle: "mythological", sourceId: cmtMs }),
-    indech:   mkLifecycle(stmts, { characterId: indech,   name: "Indech",   cycle: "mythological", sourceId: cmtMs }),
-    dianCecht:mkLifecycle(stmts, { characterId: dianCecht,name: "Dian Cécht",cycle:"mythological", sourceId: cmtMs }),
-    miach:    mkLifecycle(stmts, { characterId: miach,    name: "Miach",    cycle: "mythological", sourceId: cmtMs }),
-    airmed:   mkLifecycle(stmts, { characterId: airmed,   name: "Airmed",   cycle: "mythological", sourceId: cmtMs }),
-    goibniu:  mkLifecycle(stmts, { characterId: goibniu,  name: "Goibniu",  cycle: "mythological", sourceId: cmtMs }),
-    luchtaine:mkLifecycle(stmts, { characterId: luchtaine,name: "Luchtaine",cycle:"mythological",  sourceId: cmtMs }),
-    creidne:  mkLifecycle(stmts, { characterId: creidne,  name: "Creidne",  cycle: "mythological", sourceId: cmtMs }),
-    dagda:    mkLifecycle(stmts, { characterId: dagda,    name: "The Dagda", cycle:"mythological", sourceId: cmtMs }),
-    morrigan: mkLifecycle(stmts, { characterId: morrigan, name: "The Morrígan",cycle:"mythological",sourceId: cmtMs }),
-    cairbre:  mkLifecycle(stmts, { characterId: cairbre,  name: "Cairbre",  cycle: "mythological", sourceId: cmtMs }),
-    ogma:     mkLifecycle(stmts, { characterId: ogma,     name: "Ogma",     cycle: "mythological", sourceId: cmtMs }),
-    tailtiu:  mkLifecycle(stmts, { characterId: tailtiu,  name: "Tailtiu",  cycle: "mythological", sourceId: lge  }),
-    ruadan:   mkLifecycle(stmts, { characterId: ruadan,   name: "Ruadán",   cycle: "mythological", sourceId: cmtMs }),
+    nuada:     mkLifecycle(stmts, { characterId: nuada,     name: "Nuada",       cycle: "mythological", sourceId: cmtMs }),
+    bres:      mkLifecycle(stmts, { characterId: bres,      name: "Bres",        cycle: "mythological", sourceId: cmtMs }),
+    elathan:   mkLifecycle(stmts, { characterId: elathan,   name: "Elathan",     cycle: "mythological", sourceId: cmtMs }),
+    eriu:      mkLifecycle(stmts, { characterId: eriu,      name: "Ériu",        cycle: "mythological", sourceId: lge  }),
+    lugh:      mkLifecycle(stmts, { characterId: lugh,      name: "Lugh",        cycle: "mythological", sourceId: cmtMs }),
+    cian:      mkLifecycle(stmts, { characterId: cian,      name: "Cian",        cycle: "mythological", sourceId: lge  }),
+    ethniu:    mkLifecycle(stmts, { characterId: ethniu,    name: "Ethniu I",    cycle: "mythological", sourceId: cmtMs }),
+    ethniuII:  mkLifecycle(stmts, { characterId: ethniuII,  name: "Ethniu II",   cycle: "mythological", sourceId: lge  }),
+    ethniuIII: mkLifecycle(stmts, { characterId: ethniuIII, name: "Ethniu III",  cycle: "fenian",       sourceId: lge  }),
+    balor:     mkLifecycle(stmts, { characterId: balor,     name: "Balor",       cycle: "mythological", sourceId: cmtMs }),
+    indech:    mkLifecycle(stmts, { characterId: indech,    name: "Indech",      cycle: "mythological", sourceId: cmtMs }),
+    dianCecht: mkLifecycle(stmts, { characterId: dianCecht, name: "Dian Cécht",  cycle: "mythological", sourceId: cmtMs }),
+    miach:     mkLifecycle(stmts, { characterId: miach,     name: "Miach",       cycle: "mythological", sourceId: cmtMs }),
+    airmed:    mkLifecycle(stmts, { characterId: airmed,    name: "Airmed",      cycle: "mythological", sourceId: cmtMs }),
+    goibniu:   mkLifecycle(stmts, { characterId: goibniu,   name: "Goibniu",     cycle: "mythological", sourceId: cmtMs }),
+    luchtaine: mkLifecycle(stmts, { characterId: luchtaine, name: "Luchtaine",   cycle: "mythological", sourceId: cmtMs }),
+    creidne:   mkLifecycle(stmts, { characterId: creidne,   name: "Creidne",     cycle: "mythological", sourceId: cmtMs }),
+    dagda:     mkLifecycle(stmts, { characterId: dagda,     name: "The Dagda",   cycle: "mythological", sourceId: cmtMs }),
+    morrigan:  mkLifecycle(stmts, { characterId: morrigan,  name: "The Morrígan",cycle: "mythological", sourceId: cmtMs }),
+    brig:      mkLifecycle(stmts, { characterId: brig,      name: "Bríg",        cycle: "mythological", sourceId: cmtMs }),
+    cairbre:   mkLifecycle(stmts, { characterId: cairbre,   name: "Cairbre",     cycle: "mythological", sourceId: cmtMs }),
+    ogma:      mkLifecycle(stmts, { characterId: ogma,      name: "Ogma",        cycle: "mythological", sourceId: cmtMs }),
+    tailtiu:   mkLifecycle(stmts, { characterId: tailtiu,   name: "Tailtiu",     cycle: "mythological", sourceId: lge  }),
+    ruadan:    mkLifecycle(stmts, { characterId: ruadan,    name: "Ruadán",      cycle: "mythological", sourceId: cmtMs }),
   };
 
   // ── KNOWN GENEALOGICAL ORDERING ON LIFECYCLES ─────────────────────────────
@@ -372,16 +446,28 @@ export const seed: Seed["seed"] = (db) => {
   R(LC.dianCecht.birthId, LC.miach.birthId,  "before", "certain",  "Dian Cécht is Miach's father — born first");
   R(LC.dianCecht.birthId, LC.airmed.birthId, "before", "certain",  "Dian Cécht is Airmed's father — born first");
   R(LC.balor.birthId,     LC.ethniu.birthId, "before", "certain",  "Balor is Ethniu's father — born first");
-  R(LC.cian.birthId,      LC.lugh.birthId,   "before", "certain",  "Cian is Lugh's father — born first");
-  R(LC.ethniu.birthId,    LC.lugh.birthId,   "before", "certain",  "Ethniu is Lugh's mother — born first");
-  R(LC.balor.birthId,     LC.lugh.birthId,   "before", "certain",  "Balor is Lugh's grandfather — born well before him");
-  R(LC.elathan.birthId,   LC.bres.birthId,   "before", "certain",  "Elathan is Bres's father — born first");
-  R(LC.eriu.birthId,      LC.bres.birthId,   "before", "certain",  "Ériu is Bres's mother — born first");
-  R(LC.bres.birthId,      LC.ruadan.birthId, "before", "certain",  "Bres is Ruadán's father — born first");
+  // Parent → child ordering (birth before conception)
+  R(LC.dianCecht.birthId, LC.cian.birthId,      "before", "certain",  "Dian Cécht is Cian's father");
+  R(LC.dianCecht.birthId, LC.miach.birthId,     "before", "certain",  "Dian Cécht is Miach's father");
+  R(LC.dianCecht.birthId, LC.airmed.birthId,    "before", "certain",  "Dian Cécht is Airmed's father");
+  R(LC.cian.birthId,      LC.lugh.birthId,      "before", "certain",  "Cian is Lugh's father — born first");
+  R(LC.ethniu.birthId,    LC.lugh.birthId,      "before", "certain",  "Ethniu I is Lugh's mother — born first");
+  R(LC.balor.birthId,     LC.ethniu.birthId,    "before", "certain",  "Balor is Ethniu I's father — born first");
+  R(LC.balor.birthId,     LC.lugh.birthId,      "before", "certain",  "Balor is Lugh's grandfather — born well before him");
+  R(LC.elathan.birthId,   LC.bres.birthId,      "before", "certain",  "Elathan is Bres's father — born first");
+  R(LC.eriu.birthId,      LC.bres.birthId,      "before", "certain",  "Ériu is Bres's mother — born first");
+  R(LC.dagda.birthId,     LC.brig.birthId,      "before", "certain",  "Dagda is Bríg's father — born first");
+  R(LC.bres.birthId,      LC.ruadan.birthId,    "before", "certain",  "Bres is Ruadán's father — born first");
+  R(LC.brig.birthId,      LC.ruadan.birthId,    "before", "certain",  "Bríg is Ruadán's mother — born first");
+  // Grandparent ordering (Dian Cécht is Lugh's paternal grandfather)
+  R(LC.dianCecht.birthId, LC.lugh.birthId,      "before", "certain",  "Dian Cécht is Lugh's paternal grandfather");
   // Tailtiu died before Lugh's adulthood (she fostered him)
-  R(LC.tailtiu.deathId,   LC.lugh.birthId,   "before", "probable", "Tailtiu died from clearing forest — probably before Lugh reached adulthood");
+  R(LC.tailtiu.deathId,   LC.lugh.birthId,      "before", "probable", "Tailtiu died from clearing forest — probably before Lugh reached adulthood");
   // Miach dies before Airmed catalogues his herbs (she does it after his death)
-  R(LC.miach.deathId,     LC.airmed.deathId, "before", "certain",  "Airmed outlives Miach");
+  R(LC.miach.deathId,     LC.airmed.deathId,    "before", "certain",  "Airmed outlives Miach");
+  // Ethniu II and III are later-cycle aspects — their births come after Ethniu I's era
+  R(LC.ethniu.birthId,    LC.ethniuII.birthId,  "before", "probable", "Ethniu II is a later mythological expression of the same divine name");
+  R(LC.ethniuII.birthId,  LC.ethniuIII.birthId, "before", "probable", "Ethniu III appears in the Fenian cycle — later than Ethniu II");
 
   // ── NARRATIVE EVENTS ─────────────────────────────────────────────────────
 
@@ -712,9 +798,35 @@ export const seed: Seed["seed"] = (db) => {
     eventIds: [e_ruadan],
     sourceId: cmtMs });
 
+  addLifecycleBrackets(stmts, { name: "Bríg",
+    birthId: LC.brig.birthId, deathId: LC.brig.deathId,
+    // Bríg is present at Ruadán's death (she mourned him) but no narrative
+    // event currently models her directly — the keening is described in e_ruadan
+    eventIds: [e_ruadan],
+    sourceId: cmtMs });
+
+  // Ethniu II and III have no direct narrative events in this seed — their
+  // lifecycle events establish them as mythological entities with temporal extent.
+  // The aspect relations and cycle ordering handle their positioning.
+
   // Bres must exist before Ruadán's birth (Bres is the father)
   R(LC.bres.birthId, LC.ruadan.birthId, "before", "certain",
     "Bres (Ruadán's father) must be born before Ruadán");
+
+  // Bríg must exist before Ruadán's birth (Bríg is the mother)
+  R(LC.brig.birthId, LC.ruadan.birthId, "before", "certain",
+    "Bríg (Ruadán's mother) must be born before Ruadán");
+
+  // The aspect chain: Ethniu I → II → III ordered by cycle
+  R(LC.ethniu.deathId,    LC.ethniuII.birthId,   "before", "speculative",
+    "Ethniu I is the mythological ancestor — her era ends before Ethniu II's cycle begins");
+  R(LC.ethniuII.deathId,  LC.ethniuIII.birthId,  "before", "speculative",
+    "Ethniu II is in an earlier cycle than Ethniu III (Fenian)");
+
+  // The Dagda is father of Bríg — and Bríg's husband is Bres (the tyrant king)
+  // This creates an interesting cross-faction link
+  R(LC.dagda.birthId, LC.brig.birthId, "before", "certain",
+    "Dagda is Bríg's father — born before her");
 
   // ── NARRATIVE ORDERING ────────────────────────────────────────────────────
 
