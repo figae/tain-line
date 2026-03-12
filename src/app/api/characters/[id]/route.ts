@@ -92,7 +92,9 @@ export async function GET(
         .select({
           eventId: schema.events.id,
           eventName: schema.events.name,
+          eventType: schema.events.eventType,
           cycle: schema.events.cycle,
+          parentEventId: schema.events.parentEventId,
           role: schema.eventCharacters.role,
         })
         .from(schema.eventCharacters)

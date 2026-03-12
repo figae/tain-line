@@ -8,9 +8,22 @@ interface Event {
   id: number;
   name: string;
   description: string | null;
+  eventType: string | null;
   cycle: string;
   approximateEra: string | null;
 }
+
+const EVENT_TYPE_META: Record<string, { icon: string; label: string; color: string }> = {
+  birth:          { icon: "✦", label: "Geburt",       color: "var(--sage)" },
+  death:          { icon: "✝", label: "Tod",          color: "#c87878" },
+  meeting:        { icon: "☍", label: "Begegnung",    color: "#78b4e8" },
+  battle:         { icon: "⚔", label: "Schlacht",     color: "#e87878" },
+  reign:          { icon: "♛", label: "Herrschaft",   color: "var(--gold)" },
+  transformation: { icon: "⟳", label: "Verwandlung",  color: "#a87ed8" },
+  prophecy:       { icon: "◎", label: "Prophezeiung", color: "#e8c878" },
+  journey:        { icon: "➢", label: "Reise",        color: "var(--moss)" },
+  other:          { icon: "◆", label: "Ereignis",     color: "var(--slate)" },
+};
 
 const CYCLES = [
   { key: "", label: "Alle Zyklen" },
@@ -27,6 +40,7 @@ function EventsContent() {
   const cycle = searchParams.get("cycle") ?? "";
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<string>("");
 
   useEffect(() => {
     setLoading(true);
@@ -35,6 +49,10 @@ function EventsContent() {
       .then((r) => r.json())
       .then((d) => { setEvents(d); setLoading(false); });
   }, [cycle]);
+
+  const filtered = typeFilter
+    ? events.filter((e) => (e.eventType ?? "other") === typeFilter)
+    : events;
 
   return (
     <div>
@@ -45,7 +63,7 @@ function EventsContent() {
         </p>
 
         {/* Cycle filter */}
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
           {CYCLES.map((c) => (
             <button
               key={c.key}
@@ -67,6 +85,46 @@ function EventsContent() {
             </button>
           ))}
         </div>
+
+        {/* Event type filter */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setTypeFilter("")}
+            style={{
+              padding: "4px 12px",
+              background: typeFilter === "" ? "var(--gold)" : "var(--peat)",
+              color: typeFilter === "" ? "var(--stone)" : "var(--slate)",
+              border: "1px solid var(--border)",
+              borderRadius: "2px",
+              cursor: "pointer",
+              fontFamily: "Cinzel, serif",
+              fontSize: "0.65rem",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Alle Typen
+          </button>
+          {Object.entries(EVENT_TYPE_META).map(([key, meta]) => (
+            <button
+              key={key}
+              onClick={() => setTypeFilter(typeFilter === key ? "" : key)}
+              style={{
+                padding: "4px 10px",
+                background: typeFilter === key ? `${meta.color}33` : "var(--peat)",
+                color: typeFilter === key ? meta.color : "var(--slate)",
+                border: `1px solid ${typeFilter === key ? meta.color : "var(--border)"}`,
+                borderRadius: "2px",
+                cursor: "pointer",
+                fontSize: "0.65rem",
+                fontFamily: "Cinzel, serif",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {meta.icon} {meta.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -77,7 +135,9 @@ function EventsContent() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {events.map((e) => (
+          {filtered.map((e) => {
+            const typeMeta = EVENT_TYPE_META[e.eventType ?? "other"] ?? EVENT_TYPE_META.other;
+            return (
             <Link key={e.id} href={`/events/${e.id}`} style={{ textDecoration: "none" }}>
               <div
                 className="card"
@@ -93,16 +153,21 @@ function EventsContent() {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <h2
-                    style={{
-                      fontFamily: "Cinzel, serif",
-                      fontSize: "1rem",
-                      color: "var(--cream)",
-                      margin: "0 0 0.4rem",
-                    }}
-                  >
-                    {e.name}
-                  </h2>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                    <span style={{ color: typeMeta.color, fontSize: "0.85rem" }} title={typeMeta.label}>
+                      {typeMeta.icon}
+                    </span>
+                    <h2
+                      style={{
+                        fontFamily: "Cinzel, serif",
+                        fontSize: "1rem",
+                        color: "var(--cream)",
+                        margin: 0,
+                      }}
+                    >
+                      {e.name}
+                    </h2>
+                  </div>
                   {e.description && (
                     <p
                       style={{
@@ -125,16 +190,29 @@ function EventsContent() {
                     </div>
                   )}
                 </div>
-                <span className={`badge cycle-${e.cycle}`} style={{ flexShrink: 0, fontSize: "0.65rem" }}>
-                  {CYCLES.find((c) => c.key === e.cycle)?.label ?? e.cycle}
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end", flexShrink: 0 }}>
+                  <span className={`badge cycle-${e.cycle}`} style={{ fontSize: "0.65rem" }}>
+                    {CYCLES.find((c) => c.key === e.cycle)?.label ?? e.cycle}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      color: typeMeta.color,
+                      fontFamily: "Cinzel, serif",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {typeMeta.label}
+                  </span>
+                </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {!loading && events.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div style={{ textAlign: "center", color: "var(--slate)", padding: "4rem 0" }}>
           <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>᚜</div>
           Keine Events gefunden.
