@@ -1,6 +1,20 @@
 {
   "name": "Tain Line — Celtic Mythology",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+
+  // Build from our own Dockerfile instead of pulling the plain image.
+  // Context is the project root so the Dockerfile can COPY package*.json.
+  // Heavy work (apt-get, npm ci, playwright browser) is baked into the image
+  // layer — it only re-runs when the Dockerfile or package*.json changes.
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+
+  // Expose the cache paths that were set inside the Dockerfile
+  "containerEnv": {
+    "NPM_CONFIG_CACHE": "/opt/npm-cache",
+    "PLAYWRIGHT_BROWSERS_PATH": "/opt/playwright-browsers"
+  },
 
   // Forward the Next.js dev server port
   "forwardPorts": [3000],
@@ -11,12 +25,10 @@
     }
   },
 
-  // On first container creation: install deps on the correct platform,
-  // then create/update the SQLite schema and seed initial data.
-  // NOTE: Playwright browser binaries are NOT installed here to keep
-  // Codespace startup fast. Run `npm run test:e2e:install` once manually
-  // when you need E2E tests.
-  "postCreateCommand": "npm install && npm run db:reset -- core",
+  // postCreateCommand is now fast:
+  //   • npm ci reads from the pre-warmed /opt/npm-cache  → no network
+  //   • db:reset just writes a SQLite file               → instant
+  "postCreateCommand": "npm ci --prefer-offline && npm run db:reset -- core",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
@@ -64,7 +76,6 @@
   },
 
   // Persist the SQLite database across rebuilds
-  // (node_modules lives in /workspaces which Codespaces already persists)
   "mounts": [
     "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/data,type=volume"
   ],
