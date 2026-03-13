@@ -1,20 +1,8 @@
 {
   "name": "Tain Line — Celtic Mythology",
 
-  // Build from our own Dockerfile instead of pulling the plain image.
-  // Context is the project root so the Dockerfile can COPY package*.json.
-  // Heavy work (apt-get, npm ci, playwright browser) is baked into the image
-  // layer — it only re-runs when the Dockerfile or package*.json changes.
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
-
-  // Expose the cache paths that were set inside the Dockerfile
-  "containerEnv": {
-    "NPM_CONFIG_CACHE": "/opt/npm-cache",
-    "PLAYWRIGHT_BROWSERS_PATH": "/opt/playwright-browsers"
-  },
+  // Pre-built Microsoft image — pulls in seconds, no Docker build step.
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
 
   // Forward the Next.js dev server port
   "forwardPorts": [3000],
@@ -25,10 +13,10 @@
     }
   },
 
-  // postCreateCommand is now fast:
-  //   • npm ci reads from the pre-warmed /opt/npm-cache  → no network
-  //   • db:reset just writes a SQLite file               → instant
-  "postCreateCommand": "npm ci --prefer-offline && npm run db:reset -- core",
+  // onCreateCommand runs ONCE in the background after the container is up.
+  // The Codespace is already accessible while this runs — progress is visible
+  // in the Creation Log (github.com → your codespace → "View logs").
+  "onCreateCommand": "npm install && npx playwright install --with-deps chromium && npm run db:reset -- core",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
