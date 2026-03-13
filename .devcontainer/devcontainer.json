@@ -12,9 +12,11 @@
   },
 
   // On first container creation: install deps on the correct platform,
-  // create/update the SQLite schema and seed initial data,
-  // then install Playwright browser binaries for E2E tests.
-  "postCreateCommand": "npm install && npm run db:reset -- core && npx playwright install --with-deps chromium",
+  // then create/update the SQLite schema and seed initial data.
+  // NOTE: Playwright browser binaries are NOT installed here to keep
+  // Codespace startup fast. Run `npm run test:e2e:install` once manually
+  // when you need E2E tests.
+  "postCreateCommand": "npm install && npm run db:reset -- core",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
