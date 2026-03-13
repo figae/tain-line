@@ -12,8 +12,9 @@
   },
 
   // On first container creation: install deps on the correct platform,
-  // then create/update the SQLite schema and seed initial data
-  "postCreateCommand": "npm install && npm run db:reset -- core",
+  // create/update the SQLite schema and seed initial data,
+  // then install Playwright browser binaries for E2E tests.
+  "postCreateCommand": "npm install && npm run db:reset -- core && npx playwright install --with-deps chromium",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
@@ -45,7 +46,11 @@
         "mikestead.dotenv",
 
         // UI
-        "PKief.material-icon-theme"
+        "PKief.material-icon-theme",
+
+        // Testing
+        "vitest.explorer",
+        "ms-playwright.playwright"
       ],
       "settings": {
         "editor.formatOnSave": true,
