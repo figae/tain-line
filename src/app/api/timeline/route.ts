@@ -1,48 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
-
-/**
- * Kahn's algorithm — topological sort on the event dependency DAG.
- * Returns events ordered so that if A must precede B, A appears first.
- * Events with no dependencies are ordered by cycle (mythological first).
- */
-function topologicalSort(
-  eventIds: number[],
-  deps: { beforeEventId: number; afterEventId: number; confidence: string | null }[]
-): number[] {
-  const inDegree = new Map<number, number>();
-  const adj = new Map<number, number[]>();
-
-  for (const id of eventIds) {
-    inDegree.set(id, 0);
-    adj.set(id, []);
-  }
-
-  for (const dep of deps) {
-    if (!inDegree.has(dep.afterEventId) || !adj.has(dep.beforeEventId)) continue;
-    adj.get(dep.beforeEventId)!.push(dep.afterEventId);
-    inDegree.set(dep.afterEventId, (inDegree.get(dep.afterEventId) ?? 0) + 1);
-  }
-
-  const queue: number[] = [];
-  for (const [id, deg] of inDegree) {
-    if (deg === 0) queue.push(id);
-  }
-
-  const result: number[] = [];
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    result.push(node);
-    for (const neighbor of adj.get(node) ?? []) {
-      const newDeg = (inDegree.get(neighbor) ?? 0) - 1;
-      inDegree.set(neighbor, newDeg);
-      if (newDeg === 0) queue.push(neighbor);
-    }
-  }
-
-  return result;
-}
+import { topologicalSort } from "@/lib/topological-sort";
 
 const CYCLE_ORDER: Record<string, number> = {
   mythological: 0,
@@ -53,9 +12,9 @@ const CYCLE_ORDER: Record<string, number> = {
 };
 
 export async function GET() {
-  const [events, deps, allEventChars] = await Promise.all([
+  const [events, relations, allEventChars] = await Promise.all([
     db.select().from(schema.events),
-    db.select().from(schema.eventDependencies),
+    db.select().from(schema.eventRelations),
     db
       .select({
         eventId: schema.eventCharacters.eventId,
@@ -64,45 +23,35 @@ export async function GET() {
         role: schema.eventCharacters.role,
       })
       .from(schema.eventCharacters)
-      .innerJoin(
-        schema.characters,
-        eq(schema.eventCharacters.characterId, schema.characters.id)
-      ),
+      .innerJoin(schema.characters, eq(schema.eventCharacters.characterId, schema.characters.id)),
   ]);
 
-  // Sort events by cycle first, then topological
+  // Pre-sort by cycle so events with no ordering constraints appear in
+  // mythological → ulster → fenian order
   const sorted = [...events].sort(
     (a, b) =>
       (CYCLE_ORDER[a.cycle ?? "other"] ?? 4) -
       (CYCLE_ORDER[b.cycle ?? "other"] ?? 4)
   );
 
-  const topoOrder = topologicalSort(
-    sorted.map((e) => e.id),
-    deps
-  );
+  const topoOrder = topologicalSort(sorted.map((e) => e.id), relations);
 
-  // Build a lookup
   const eventById = new Map(events.map((e) => [e.id, e]));
+
   const charsByEvent = new Map<number, typeof allEventChars>();
   for (const ec of allEventChars) {
     if (!charsByEvent.has(ec.eventId)) charsByEvent.set(ec.eventId, []);
     charsByEvent.get(ec.eventId)!.push(ec);
   }
 
-  const dependenciesByEvent = new Map<
-    number,
-    { before: number[]; after: number[] }
-  >();
-  for (const dep of deps) {
-    if (!dependenciesByEvent.has(dep.beforeEventId)) {
-      dependenciesByEvent.set(dep.beforeEventId, { before: [], after: [] });
-    }
-    if (!dependenciesByEvent.has(dep.afterEventId)) {
-      dependenciesByEvent.set(dep.afterEventId, { before: [], after: [] });
-    }
-    dependenciesByEvent.get(dep.beforeEventId)!.after.push(dep.afterEventId);
-    dependenciesByEvent.get(dep.afterEventId)!.before.push(dep.beforeEventId);
+  // Build relation index: for each event, what does it connect to?
+  type RelEntry = { eventId: number; relationType: string; direction: "from" | "to" };
+  const relsByEvent = new Map<number, RelEntry[]>();
+  for (const rel of relations) {
+    if (!relsByEvent.has(rel.fromEventId)) relsByEvent.set(rel.fromEventId, []);
+    if (!relsByEvent.has(rel.toEventId))   relsByEvent.set(rel.toEventId, []);
+    relsByEvent.get(rel.fromEventId)!.push({ eventId: rel.toEventId,   relationType: rel.relationType ?? "before", direction: "from" });
+    relsByEvent.get(rel.toEventId)!.push(  { eventId: rel.fromEventId, relationType: rel.relationType ?? "before", direction: "to"   });
   }
 
   const timeline = topoOrder
@@ -113,10 +62,20 @@ export async function GET() {
         ...event,
         position: topoOrder.indexOf(id),
         characters: charsByEvent.get(id) ?? [],
-        dependencies: dependenciesByEvent.get(id) ?? { before: [], after: [] },
+        relations: relsByEvent.get(id) ?? [],
       };
     })
     .filter(Boolean);
 
-  return NextResponse.json({ timeline, totalEvents: events.length });
+  return NextResponse.json({
+    timeline,
+    totalEvents: events.length,
+    // Expose the full relation set for graph rendering
+    relations: relations.map((r) => ({
+      fromEventId: r.fromEventId,
+      toEventId: r.toEventId,
+      relationType: r.relationType,
+      confidence: r.confidence,
+    })),
+  });
 }

@@ -44,6 +44,6 @@ next-env.d.ts
 *.db-shm
 *.db-wal
 
-# SQLite database (tracked in repo so Codespaces starts with seed data)
-# To exclude: uncomment the line below
-# tain-line.db
+# SQLite database (generated at runtime via db:reset/db:seed)
+data/
+tain-line.db

@@ -4,8 +4,10 @@
  */
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "tain-line.db");
+const DB_PATH = path.join(process.cwd(), "data", "tain-line.db");
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const sqlite = new Database(DB_PATH);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
@@ -66,25 +68,31 @@ CREATE TABLE IF NOT EXISTS family_relations (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
   from_character_id   INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
   to_character_id     INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  relation_type       TEXT NOT NULL CHECK(relation_type IN ('father','mother','child','sibling','spouse','foster_parent','foster_child','other')),
+  relation_type       TEXT NOT NULL CHECK(relation_type IN ('father','mother','child','sibling','half_sibling','spouse','lover','foster_parent','foster_child','uncle','aunt','nephew','niece','grandparent','grandchild','aspect','other')),
   notes               TEXT,
   source_id           INTEGER REFERENCES sources(id)
 );
 
 CREATE TABLE IF NOT EXISTS places (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  name             TEXT NOT NULL,
-  alt_names        TEXT,
-  type             TEXT DEFAULT 'other' CHECK(type IN ('otherworld','hill','island','plain','forest','river','sea','fortress','other')),
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  name              TEXT NOT NULL,
+  alt_names         TEXT,
+  type              TEXT DEFAULT 'other' CHECK(type IN ('otherworld','hill','island','plain','forest','river','sea','fortress','other')),
   modern_equivalent TEXT,
-  description      TEXT,
-  source_id        INTEGER REFERENCES sources(id)
+  description       TEXT,
+  source_id         INTEGER REFERENCES sources(id)
 );
 
 CREATE TABLE IF NOT EXISTS events (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   name             TEXT NOT NULL,
   description      TEXT,
+  event_type       TEXT DEFAULT 'other' CHECK(event_type IN (
+                     'birth','death','meeting','battle','reign',
+                     'transformation','prophecy','journey','other'
+                   )),
+  parent_event_id  INTEGER REFERENCES events(id),
+  character_id     INTEGER REFERENCES characters(id),
   cycle            TEXT DEFAULT 'other' CHECK(cycle IN ('mythological','ulster','fenian','kings','other')),
   approximate_era  TEXT,
   source_id        INTEGER REFERENCES sources(id),
@@ -107,18 +115,20 @@ CREATE TABLE IF NOT EXISTS event_places (
   source_id INTEGER REFERENCES sources(id)
 );
 
-CREATE TABLE IF NOT EXISTS event_dependencies (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  before_event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  after_event_id  INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  reason          TEXT NOT NULL,
-  confidence      TEXT DEFAULT 'probable' CHECK(confidence IN ('certain','probable','speculative')),
-  source_id       INTEGER REFERENCES sources(id)
+CREATE TABLE IF NOT EXISTS event_relations (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_event_id  INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  to_event_id    INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  relation_type  TEXT NOT NULL DEFAULT 'before' CHECK(relation_type IN (
+                   'before','causes','contains','parallel','meets'
+                 )),
+  confidence     TEXT DEFAULT 'probable' CHECK(confidence IN ('certain','probable','speculative')),
+  reason         TEXT,
+  source_id      INTEGER REFERENCES sources(id)
 );
 
 `;
 
-// Run all CREATE TABLE statements
 for (const statement of schema
   .split(";")
   .map((s) => s.trim())

@@ -1,5 +1,7 @@
 {
   "name": "Tain Line — Celtic Mythology",
+
+  // Pre-built Microsoft image — pulls in seconds, no Docker build step.
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
 
   // Forward the Next.js dev server port
@@ -11,9 +13,10 @@
     }
   },
 
-  // On first container creation: install deps on the correct platform,
-  // then create/update the SQLite schema and seed initial data
-  "postCreateCommand": "npm install && npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts",
+  // onCreateCommand runs ONCE in the background after the container is up.
+  // The Codespace is already accessible while this runs — progress is visible
+  // in the Creation Log (github.com → your codespace → "View logs").
+  "onCreateCommand": "npm install && npx playwright install --with-deps chromium && npm run db:reset -- core",
 
   // On every container start: keep deps in sync (handles platform rebuilds)
   "postStartCommand": "npm install --prefer-offline 2>/dev/null || true",
@@ -21,10 +24,35 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        // Linting & formatting
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
+
+        // TypeScript & React
+        "yoavbls.pretty-ts-errors",
+        "dsznajder.es7-react-js-snippets",
+        "formulahendry.auto-rename-tag",
+
+        // Tailwind
         "bradlc.vscode-tailwindcss",
-        "PKief.material-icon-theme"
+
+        // SQLite
+        "qwtel.sqlite-viewer",
+
+        // Git
+        "eamodio.gitlens",
+
+        // DX
+        "usernamehw.errorlens",
+        "christian-kohler.path-intellisense",
+        "mikestead.dotenv",
+
+        // UI
+        "PKief.material-icon-theme",
+
+        // Testing
+        "vitest.explorer",
+        "ms-playwright.playwright"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -35,9 +63,10 @@
     }
   },
 
-  // Persist node_modules and the SQLite database across rebuilds
+  // Persist the SQLite database across rebuilds
   "mounts": [
-    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
-    "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/tain-line.db,type=volume"
-  ]
+    "source=${localWorkspaceFolderBasename}-db,target=${containerWorkspaceFolder}/data,type=volume"
+  ],
+
+  "remoteUser": "node"
 }
