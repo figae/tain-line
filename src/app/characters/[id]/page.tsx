@@ -13,6 +13,8 @@ interface CharDetail {
   isDeity: boolean;
   isDead: boolean;
   description: string | null;
+  sourceQuote: string | null;
+  confidence: string | null;
   source: { title: string; url: string | null; year: number | null } | null;
   properties: {
     id: number;
@@ -391,7 +393,20 @@ export default function CharacterDetail() {
           </p>
         )}
 
-        {char.source && (
+        {char.sourceQuote && (
+          <blockquote className="source-quote" style={{ marginTop: "1rem" }}>
+            „{char.sourceQuote}"
+            {char.source && (
+              <span className="attribution">
+                — {char.source.url ? (
+                  <a href={char.source.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--gold)" }}>{char.source.title}</a>
+                ) : char.source.title}
+              </span>
+            )}
+          </blockquote>
+        )}
+
+        {!char.sourceQuote && char.source && (
           <div style={{ marginTop: "1rem", fontSize: "0.8rem", color: "var(--slate)", fontStyle: "italic" }}>
             Quelle:{" "}
             {char.source.url ? (
@@ -402,6 +417,25 @@ export default function CharacterDetail() {
               char.source.title
             )}
             {char.source.year && ` (${char.source.year})`}
+          </div>
+        )}
+
+        {/* Confidence badge */}
+        {char.confidence && char.confidence !== "established" && (
+          <div style={{ marginTop: "0.5rem" }}>
+            <span style={{
+              fontSize: "0.6rem",
+              fontFamily: "Cinzel, serif",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "2px 8px",
+              borderRadius: 10,
+              background: char.confidence === "speculative" ? "rgba(168,126,216,0.1)" : "rgba(224,168,74,0.1)",
+              color: char.confidence === "speculative" ? "#a87ed8" : "var(--amber)",
+              border: `1px solid ${char.confidence === "speculative" ? "#a87ed844" : "rgba(224,168,74,0.3)"}`,
+            }}>
+              {char.confidence === "speculative" ? "◎ Spekulativ" : "~ Wahrscheinlich"}
+            </span>
           </div>
         )}
 
