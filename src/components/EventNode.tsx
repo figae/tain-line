@@ -27,7 +27,7 @@ const EVENT_TYPE_META: Record<string, { icon: string; color: string }> = {
 // Multi-character highlight colors
 const FOCUS_COLORS = ["#c89132", "#78b4e8", "#a0c878", "#e87878"];
 
-export interface EventNodeData {
+export interface EventNodeData extends Record<string, unknown> {
   event: {
     id: number;
     name: string;
@@ -38,13 +38,14 @@ export interface EventNodeData {
   };
   focusCharIds: number[][];  // array of selected char groups, each group one color
   dimmed: boolean;
+  compact?: boolean;         // force compact pill rendering (used in swimlanes)
 }
 
 function EventNodeInner({ data }: { data: EventNodeData }) {
-  const { event, focusCharIds, dimmed } = data;
+  const { event, focusCharIds, dimmed, compact } = data;
   const cycleColor = CYCLE_COLOR[event.cycle ?? "other"] ?? "#7a8a7a";
   const typeMeta = EVENT_TYPE_META[event.eventType ?? "other"] ?? EVENT_TYPE_META.other;
-  const isLifecycle = event.eventType === "birth" || event.eventType === "death";
+  const isLifecycle = compact || event.eventType === "birth" || event.eventType === "death";
   const isChild = event.parentEventId !== null;
 
   // Find which focus groups this node belongs to
