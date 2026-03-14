@@ -152,6 +152,10 @@ const approvalCols = [
   "confidence   TEXT DEFAULT 'established'",
 ];
 
+// ── P4: Multi-mythology column ─────────────────────────────────────────────
+const mythologyCols = ["mythology TEXT DEFAULT 'celtic-irish'"];
+const mythologyTables = ["characters", "events"];
+
 const approvalTables = ["characters", "events", "places", "groups", "family_relations"];
 
 for (const table of approvalTables) {
@@ -163,6 +167,16 @@ for (const table of approvalTables) {
       // Column already exists — ignore
     }
     void colName; // suppress unused warning
+  }
+}
+
+for (const table of mythologyTables) {
+  for (const col of mythologyCols) {
+    try {
+      sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${col};`);
+    } catch {
+      // Column already exists — ignore
+    }
   }
 }
 

@@ -58,6 +58,7 @@ export const characters = sqliteTable("characters", {
   epithet: text("epithet"),
   isDeity: integer("is_deity", { mode: "boolean" }).default(false),
   isDead: integer("is_dead", { mode: "boolean" }).default(false),
+  mythology: text("mythology").default("celtic-irish"),  // extensible: celtic-irish | greek | norse
   sourceId: integer("source_id").references(() => sources.id),
   status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
   sourceQuote: text("source_quote"),
@@ -178,6 +179,7 @@ export const events = sqliteTable("events", {
   // For birth/death events: which character does this lifecycle event belong to?
   characterId: integer("character_id").references(() => characters.id),
   cycle: text("cycle", { enum: mythologicalCycles }).default("other"),
+  mythology: text("mythology").default("celtic-irish"),  // extensible
   approximateEra: text("approximate_era"),
   sourceId: integer("source_id").references(() => sources.id),
   status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),

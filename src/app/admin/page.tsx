@@ -46,6 +46,8 @@ export default async function AdminPage() {
   const actions = [
     { href: "/admin/extract", label: "KI-Extraktion", description: "Sagentext einfügen → Claude extrahiert Charaktere, Events, Orte", icon: "◎" },
     { href: "/admin/review", label: "Review-Queue", description: `${pending.total} Einträge warten auf Freigabe`, icon: "✦", badge: pending.total },
+    { href: "/api/export?format=json-ld", label: "JSON-LD Export", description: "Vollständiger Datensatz als JSON-LD (Semantic Web)", icon: "⬇", external: true },
+    { href: "/api/export?format=json", label: "JSON Export", description: "Vollständiger Datensatz als plain JSON", icon: "⬇", external: true },
   ];
 
   return (
@@ -79,7 +81,7 @@ export default async function AdminPage() {
       {/* Actions */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
         {actions.map((a) => (
-          <Link key={a.href} href={a.href} style={{ textDecoration: "none" }}>
+          <Link key={a.href} href={a.href} style={{ textDecoration: "none" }} {...("external" in a && a.external ? { target: "_blank" } : {})}>
             <div
               style={{
                 ...cardStyle,
