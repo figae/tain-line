@@ -42,29 +42,27 @@ export const seed: Seed["seed"] = (db) => {
   ).lastInsertRowid as number;
 
   // ── GROUPS ───────────────────────────────────────────────────────────────
+  // Use INSERT OR IGNORE so this seed is safe to run alongside `core`,
+  // which inserts some of the same group names.  After each upsert we
+  // SELECT the actual id (whether newly inserted or pre-existing).
   const insertGroup = db.prepare(
-    `INSERT INTO groups (name, alt_names, description, source_id) VALUES (?,?,?,?)`
+    `INSERT OR IGNORE INTO groups (name, alt_names, description, source_id) VALUES (?,?,?,?)`
   );
+  const selectGroup = db.prepare(`SELECT id FROM groups WHERE name = ?`);
 
-  const tuatha = insertGroup.run(
-    "Tuatha Dé Danann",
-    JSON.stringify(["People of the Goddess Danu", "Tribe of the Gods"]),
-    "The divine race who came to Ireland from the northern islands. They brought four treasures and defeated the Fir Bolg.",
-    lge
-  ).lastInsertRowid as number;
+  const upsertGroup = (name: string, altNames: string[], description: string, sourceId: number): number => {
+    insertGroup.run(name, JSON.stringify(altNames), description, sourceId);
+    return (selectGroup.get(name) as { id: number }).id;
+  };
 
-  const fomor = insertGroup.run(
-    "Fomorians",
-    JSON.stringify(["Fomoire", "Fomori", "Fomóraig"]),
-    "Primordial beings from under the sea. They represent chaos, darkness, and untamed nature. They oppressed the Tuatha Dé during Bres's reign.",
-    cmtMs
-  ).lastInsertRowid as number;
+  const tuatha  = upsertGroup("Tuatha Dé Danann", ["People of the Goddess Danu", "Tribe of the Gods"],
+    "The divine race who came to Ireland from the northern islands. They brought four treasures and defeated the Fir Bolg.", lge);
 
-  const firBolg = insertGroup.run(
-    "Fir Bolg", JSON.stringify(["Men of Bags", "Builg"]),
-    "Pre-divine inhabitants of Ireland, defeated by the Tuatha Dé Danann at the First Battle.",
-    lge
-  ).lastInsertRowid as number;
+  const fomor   = upsertGroup("Fomorians", ["Fomoire", "Fomori", "Fomóraig"],
+    "Primordial beings from under the sea. They represent chaos, darkness, and untamed nature. They oppressed the Tuatha Dé during Bres's reign.", cmtMs);
+
+  const firBolg = upsertGroup("Fir Bolg", ["Men of Bags", "Builg"],
+    "Pre-divine inhabitants of Ireland, defeated by the Tuatha Dé Danann at the First Battle.", lge);
 
   // ── CHARACTERS ───────────────────────────────────────────────────────────
   const insertChar = db.prepare(
