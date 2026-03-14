@@ -42,29 +42,27 @@ export const seed: Seed["seed"] = (db) => {
   ).lastInsertRowid as number;
 
   // ── GROUPS ───────────────────────────────────────────────────────────────
+  // Use INSERT OR IGNORE so this seed is safe to run alongside `core`,
+  // which inserts some of the same group names.  After each upsert we
+  // SELECT the actual id (whether newly inserted or pre-existing).
   const insertGroup = db.prepare(
-    `INSERT INTO groups (name, alt_names, description, source_id) VALUES (?,?,?,?)`
+    `INSERT OR IGNORE INTO groups (name, alt_names, description, source_id) VALUES (?,?,?,?)`
   );
+  const selectGroup = db.prepare(`SELECT id FROM groups WHERE name = ?`);
 
-  const tuatha = insertGroup.run(
-    "Tuatha Dé Danann",
-    JSON.stringify(["People of the Goddess Danu", "Tribe of the Gods"]),
-    "The divine race who came to Ireland from the northern islands. They brought four treasures and defeated the Fir Bolg.",
-    lge
-  ).lastInsertRowid as number;
+  const upsertGroup = (name: string, altNames: string[], description: string, sourceId: number): number => {
+    insertGroup.run(name, JSON.stringify(altNames), description, sourceId);
+    return (selectGroup.get(name) as { id: number }).id;
+  };
 
-  const fomor = insertGroup.run(
-    "Fomorians",
-    JSON.stringify(["Fomoire", "Fomori", "Fomóraig"]),
-    "Primordial beings from under the sea. They represent chaos, darkness, and untamed nature. They oppressed the Tuatha Dé during Bres's reign.",
-    cmtMs
-  ).lastInsertRowid as number;
+  const tuatha  = upsertGroup("Tuatha Dé Danann", ["People of the Goddess Danu", "Tribe of the Gods"],
+    "The divine race who came to Ireland from the northern islands. They brought four treasures and defeated the Fir Bolg.", lge);
 
-  const firBolg = insertGroup.run(
-    "Fir Bolg", JSON.stringify(["Men of Bags", "Builg"]),
-    "Pre-divine inhabitants of Ireland, defeated by the Tuatha Dé Danann at the First Battle.",
-    lge
-  ).lastInsertRowid as number;
+  const fomor   = upsertGroup("Fomorians", ["Fomoire", "Fomori", "Fomóraig"],
+    "Primordial beings from under the sea. They represent chaos, darkness, and untamed nature. They oppressed the Tuatha Dé during Bres's reign.", cmtMs);
+
+  const firBolg = upsertGroup("Fir Bolg", ["Men of Bags", "Builg"],
+    "Pre-divine inhabitants of Ireland, defeated by the Tuatha Dé Danann at the First Battle.", lge);
 
   // ── CHARACTERS ───────────────────────────────────────────────────────────
   const insertChar = db.prepare(
@@ -280,12 +278,23 @@ export const seed: Seed["seed"] = (db) => {
   ).lastInsertRowid as number;
   insertCG.run(tailtiu, firBolg, lge);
 
+  const sreng = insertChar.run(
+    "Sreng", JSON.stringify(["Sreng mac Sengann"]),
+    "male",
+    "Fir Bolg champion. At the First Battle of Mag Tuired he fought a single combat with Nuada Airgetlám, severing Nuada's right arm at the shoulder. This blemish ended Nuada's reign. Sreng himself was wounded on the shield arm. The Tuatha Dé allowed the surviving Fir Bolg to keep the province of Connacht as the price of peace.",
+    "Champion of the Fir Bolg", 0, lge
+  ).lastInsertRowid as number;
+  insertCG.run(sreng, firBolg, lge);
+
   const ruadan = insertChar.run(
     "Ruadán", JSON.stringify(["Rúadán mac Bres"]),
     "male",
     "Son of Bres and Bríg. Sent by the Fomorians as a spy. Wounded Goibniu with a spear, but Goibniu pulled it out and killed him. Bríg's keening for Ruadán was the first keening ever heard in Ireland.",
     null, 1, cmtMs
   ).lastInsertRowid as number;
+
+  insertCG.run(ruadan, tuatha, cmtMs); // mother Bríg is Tuatha Dé
+  insertCG.run(ruadan, fomor, cmtMs);  // father Bres is Fomorian-aligned
 
   const brig = insertChar.run(
     "Bríg", JSON.stringify(["Bríg inghen Dagda", "Brigid", "Bríd", "Brig"]),
@@ -438,21 +447,17 @@ export const seed: Seed["seed"] = (db) => {
     ogma:      mkLifecycle(stmts, { characterId: ogma,      name: "Ogma",        cycle: "mythological", sourceId: cmtMs }),
     tailtiu:   mkLifecycle(stmts, { characterId: tailtiu,   name: "Tailtiu",     cycle: "mythological", sourceId: lge  }),
     ruadan:    mkLifecycle(stmts, { characterId: ruadan,    name: "Ruadán",      cycle: "mythological", sourceId: cmtMs }),
+    sreng:     mkLifecycle(stmts, { characterId: sreng,     name: "Sreng",       cycle: "mythological", sourceId: lge  }),
   };
 
   // ── KNOWN GENEALOGICAL ORDERING ON LIFECYCLES ─────────────────────────────
-  // From family_relations we can derive:
+  // Parent → child: parent's birth must precede child's birth
   R(LC.dianCecht.birthId, LC.cian.birthId,   "before", "certain",  "Dian Cécht is Cian's father — born first");
   R(LC.dianCecht.birthId, LC.miach.birthId,  "before", "certain",  "Dian Cécht is Miach's father — born first");
   R(LC.dianCecht.birthId, LC.airmed.birthId, "before", "certain",  "Dian Cécht is Airmed's father — born first");
-  R(LC.balor.birthId,     LC.ethniu.birthId, "before", "certain",  "Balor is Ethniu's father — born first");
-  // Parent → child ordering (birth before conception)
-  R(LC.dianCecht.birthId, LC.cian.birthId,      "before", "certain",  "Dian Cécht is Cian's father");
-  R(LC.dianCecht.birthId, LC.miach.birthId,     "before", "certain",  "Dian Cécht is Miach's father");
-  R(LC.dianCecht.birthId, LC.airmed.birthId,    "before", "certain",  "Dian Cécht is Airmed's father");
-  R(LC.cian.birthId,      LC.lugh.birthId,      "before", "certain",  "Cian is Lugh's father — born first");
-  R(LC.ethniu.birthId,    LC.lugh.birthId,      "before", "certain",  "Ethniu I is Lugh's mother — born first");
-  R(LC.balor.birthId,     LC.ethniu.birthId,    "before", "certain",  "Balor is Ethniu I's father — born first");
+  R(LC.balor.birthId,     LC.ethniu.birthId, "before", "certain",  "Balor is Ethniu I's father — born first");
+  R(LC.cian.birthId,      LC.lugh.birthId,   "before", "certain",  "Cian is Lugh's father — born first");
+  R(LC.ethniu.birthId,    LC.lugh.birthId,   "before", "certain",  "Ethniu I is Lugh's mother — born first");
   R(LC.balor.birthId,     LC.lugh.birthId,      "before", "certain",  "Balor is Lugh's grandfather — born well before him");
   R(LC.elathan.birthId,   LC.bres.birthId,      "before", "certain",  "Elathan is Bres's father — born first");
   R(LC.eriu.birthId,      LC.bres.birthId,      "before", "certain",  "Ériu is Bres's mother — born first");
@@ -461,8 +466,8 @@ export const seed: Seed["seed"] = (db) => {
   R(LC.brig.birthId,      LC.ruadan.birthId,    "before", "certain",  "Bríg is Ruadán's mother — born first");
   // Grandparent ordering (Dian Cécht is Lugh's paternal grandfather)
   R(LC.dianCecht.birthId, LC.lugh.birthId,      "before", "certain",  "Dian Cécht is Lugh's paternal grandfather");
-  // Tailtiu died before Lugh's adulthood (she fostered him)
-  R(LC.tailtiu.deathId,   LC.lugh.birthId,      "before", "probable", "Tailtiu died from clearing forest — probably before Lugh reached adulthood");
+  // Tailtiu fostered Lugh — she was alive when he was born, but died before he reached adulthood
+  R(LC.lugh.birthId,      LC.tailtiu.deathId,   "before", "probable", "Tailtiu fostered Lugh — she was alive at his birth and died after from clearing the forests");
   // Miach dies before Airmed catalogues his herbs (she does it after his death)
   R(LC.miach.deathId,     LC.airmed.deathId,    "before", "certain",  "Airmed outlives Miach");
   // Ethniu II and III are later-cycle aspects — their births come after Ethniu I's era
@@ -477,7 +482,8 @@ export const seed: Seed["seed"] = (db) => {
     "In the First Battle of Mag Tuired, Nuada fights the Fir Bolg champion Sreng. Sreng's sword-blow cuts off Nuada's right arm at the shoulder. The Tuatha Dé win but Nuada is blemished.",
     "battle", null, null, "mythological", "Age of Gods — Arrival", cmtMs
   ).lastInsertRowid as number;
-  stmts.insEC.run(e_nuadaArm, nuada, "victim", "Loses his arm to Sreng", cmtMs);
+  stmts.insEC.run(e_nuadaArm, nuada,  "victim",      "Loses his arm to Sreng's sword-blow", cmtMs);
+  stmts.insEC.run(e_nuadaArm, sreng,  "protagonist", "Severs Nuada's arm; is himself wounded on the shield arm", lge);
   insertEP.run(e_nuadaArm, magTuired, cmtMs);
 
   // 2. Elathan meets Ériu → Bres is conceived
@@ -805,9 +811,30 @@ export const seed: Seed["seed"] = (db) => {
     eventIds: [e_ruadan],
     sourceId: cmtMs });
 
+  addLifecycleBrackets(stmts, { name: "Tailtiu",
+    birthId: LC.tailtiu.birthId, deathId: LC.tailtiu.deathId,
+    // No dedicated narrative event for Tailtiu in this seed; her death is
+    // constrained via R() to follow Lugh's birth (she fostered him).
+    eventIds: [],
+    sourceId: lge });
+
+  addLifecycleBrackets(stmts, { name: "Sreng",
+    birthId: LC.sreng.birthId, deathId: LC.sreng.deathId,
+    eventIds: [e_nuadaArm],
+    sourceId: lge });
+
   // Ethniu II and III have no direct narrative events in this seed — their
   // lifecycle events establish them as mythological entities with temporal extent.
   // The aspect relations and cycle ordering handle their positioning.
+  addLifecycleBrackets(stmts, { name: "Ethniu II",
+    birthId: LC.ethniuII.birthId, deathId: LC.ethniuII.deathId,
+    eventIds: [],
+    sourceId: lge });
+
+  addLifecycleBrackets(stmts, { name: "Ethniu III",
+    birthId: LC.ethniuIII.birthId, deathId: LC.ethniuIII.deathId,
+    eventIds: [],
+    sourceId: lge });
 
   // Bres must exist before Ruadán's birth (Bres is the father)
   R(LC.bres.birthId, LC.ruadan.birthId, "before", "certain",
@@ -822,11 +849,6 @@ export const seed: Seed["seed"] = (db) => {
     "Ethniu I is the mythological ancestor — her era ends before Ethniu II's cycle begins");
   R(LC.ethniuII.deathId,  LC.ethniuIII.birthId,  "before", "speculative",
     "Ethniu II is in an earlier cycle than Ethniu III (Fenian)");
-
-  // The Dagda is father of Bríg — and Bríg's husband is Bres (the tyrant king)
-  // This creates an interesting cross-faction link
-  R(LC.dagda.birthId, LC.brig.birthId, "before", "certain",
-    "Dagda is Bríg's father — born before her");
 
   // ── NARRATIVE ORDERING ────────────────────────────────────────────────────
 

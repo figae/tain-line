@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import Link from "next/link";
 import {
   ReactFlow,
@@ -9,12 +9,16 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { EventNode, type EventNodeData } from "@/components/EventNode";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TimelineEvent {
   id: number;
@@ -24,7 +28,6 @@ interface TimelineEvent {
   parentEventId: number | null;
   position: number;
   characters: { characterId: number; name: string; role: string }[];
-  relations: { eventId: number; relationType: string; direction: "before" | "after" }[];
 }
 
 interface Relation {
@@ -37,7 +40,10 @@ interface Relation {
 interface Character {
   id: number;
   name: string;
+  gender: string | null;
 }
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const CYCLE_Y: Record<string, number> = {
   mythological: 0,
@@ -71,21 +77,123 @@ const REL_EDGE_STYLE: Record<string, { stroke: string; strokeDasharray?: string;
   contains: { stroke: "#8855aa", strokeDasharray: "3 3", strokeWidth: 1 },
 };
 
-const FOCUS_COLORS = ["#c89132", "#78b4e8", "#a0c878", "#e87878"];
+const SWIMLANE_COLORS = ["#c89132", "#78b4e8", "#a0c878", "#e87878", "#a87ed8", "#78c8a0"];
 
-const nodeTypes: NodeTypes = { eventNode: EventNode as NodeTypes[string] };
+const GENDER_SYMBOL: Record<string, string> = {
+  male: "♂", female: "♀", other: "✦", unknown: "?",
+};
 
-const X_SPACING = 200;
-const Y_JITTER = 70; // vertical spread for same-position events within a cycle
+const X_SPACING        = 200;
+const Y_JITTER         = 70;
+const SWIMLANE_Y_START = 1340;
+const SWIMLANE_HEIGHT  = 160;
+const LABEL_X          = -300;
+
+// ── Custom node components ────────────────────────────────────────────────────
+
+interface SwimlaneLabelData extends Record<string, unknown> {
+  name: string;
+  charId: number;
+  gender: string | null;
+  color: string;
+  onRemove: (charId: number) => void;
+}
+
+const SwimlaneLabelNode = memo(function SwimlaneLabelNode({ data }: { data: SwimlaneLabelData }) {
+  const sym = GENDER_SYMBOL[data.gender ?? "unknown"] ?? "?";
+  return (
+    <>
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: "0.4rem",
+          padding: "6px 10px",
+          background: "var(--peat)",
+          border: `1px solid ${data.color}66`,
+          borderRadius: 4,
+          minWidth: 130,
+          maxWidth: 180,
+        }}
+      >
+        <span style={{ color: data.color, fontSize: "0.7rem", flexShrink: 0 }}>{sym}</span>
+        <span style={{
+          color: data.color,
+          fontFamily: "Cinzel, serif",
+          fontSize: "0.78rem",
+          flex: 1,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}>
+          {data.name}
+        </span>
+        <button
+          onClick={() => data.onRemove(data.charId)}
+          style={{
+            background: "none", border: "none",
+            color: "var(--slate)", cursor: "pointer",
+            fontSize: "0.85rem", padding: "0 2px", flexShrink: 0,
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+    </>
+  );
+});
+
+interface SeparatorData extends Record<string, unknown> { width: number }
+
+const SeparatorNode = memo(function SeparatorNode({ data }: { data: SeparatorData }) {
+  return (
+    <div style={{
+      width: data.width,
+      height: 1,
+      background: "var(--border)",
+      opacity: 0.5,
+      pointerEvents: "none",
+    }} />
+  );
+});
+
+interface CycleLabelData extends Record<string, unknown> { label: string; color: string }
+
+const CycleLabelNode = memo(function CycleLabelNode({ data }: { data: CycleLabelData }) {
+  return (
+    <div style={{
+      padding: "3px 8px",
+      color: data.color,
+      fontFamily: "Cinzel, serif",
+      fontSize: "0.7rem",
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      opacity: 0.75,
+      pointerEvents: "none",
+      whiteSpace: "nowrap",
+    }}>
+      {data.label}
+    </div>
+  );
+});
+
+const nodeTypes: NodeTypes = {
+  eventNode:     EventNode      as NodeTypes[string],
+  swimlaneLabel: SwimlaneLabelNode as NodeTypes[string],
+  separator:     SeparatorNode  as NodeTypes[string],
+  cycleLabel:    CycleLabelNode as NodeTypes[string],
+};
+
+// ── Page component ────────────────────────────────────────────────────────────
 
 export default function TimelineGraphPage() {
-  const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]);
+  const [allEvents, setAllEvents]     = useState<TimelineEvent[]>([]);
   const [allRelations, setAllRelations] = useState<Relation[]>([]);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showLifecycle, setShowLifecycle] = useState(false);
-  const [focusCharGroups, setFocusCharGroups] = useState<number[][]>([]);
-  const [charSearch, setCharSearch] = useState<string[]>(["", "", ""]);
+  const [characters, setCharacters]   = useState<Character[]>([]);
+  const [loading, setLoading]         = useState(true);
+
+  const [swimlaneCharIds, setSwimlaneCharIds] = useState<number[]>([]);
+  const [charSearch, setCharSearch]           = useState("");
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -103,112 +211,161 @@ export default function TimelineGraphPage() {
     });
   }, []);
 
-  // Build focused character groups from search selections
-  const resolvedFocusGroups = useMemo(() => {
-    return focusCharGroups.filter((g) => g.length > 0);
-  }, [focusCharGroups]);
+  const removeChar = useCallback((charId: number) => {
+    setSwimlaneCharIds((prev) => prev.filter((id) => id !== charId));
+  }, []);
 
-  // Determine if each event is focused/dimmed
-  const focusedEventIds = useMemo(() => {
-    if (resolvedFocusGroups.length === 0) return null;
-    const allFocusIds = resolvedFocusGroups.flat();
-    return new Set(
-      allEvents
-        .filter((e) => e.characters.some((c) => allFocusIds.includes(c.characterId)))
-        .map((e) => e.id)
-    );
-  }, [allEvents, resolvedFocusGroups]);
+  const addChar = useCallback((charId: number) => {
+    setSwimlaneCharIds((prev) => prev.includes(charId) ? prev : [...prev, charId]);
+    setCharSearch("");
+  }, []);
+
+  const searchResults = useMemo(() => {
+    if (charSearch.length < 1) return [];
+    const q = charSearch.toLowerCase();
+    return characters
+      .filter((c) => c.name.toLowerCase().includes(q) && !swimlaneCharIds.includes(c.id))
+      .slice(0, 8);
+  }, [characters, charSearch, swimlaneCharIds]);
 
   // Build graph
   useEffect(() => {
     if (loading) return;
 
-    const visibleEvents = showLifecycle
-      ? allEvents
-      : allEvents.filter((e) => e.eventType !== "birth" && e.eventType !== "death");
+    // Main timeline: narrative events only (no birth/death)
+    const mainEvents = allEvents.filter(
+      (e) => e.eventType !== "birth" && e.eventType !== "death"
+    );
+    const mainIds = new Set(mainEvents.map((e) => e.id));
 
-    const visibleIds = new Set(visibleEvents.map((e) => e.id));
-
-    // Track how many events are at each (cycle, position) to offset Y
     const posCount: Record<string, number> = {};
+    let maxX = 0;
 
-    const newNodes: Node[] = visibleEvents.map((e) => {
-      const cycleY = CYCLE_Y[e.cycle ?? "other"] ?? 0;
-      const posKey = `${e.cycle}-${e.position}`;
-      const slot = posCount[posKey] ?? 0;
+    const mainNodes: Node[] = mainEvents.map((e) => {
+      const cycleY  = CYCLE_Y[e.cycle ?? "other"] ?? 0;
+      const posKey  = `${e.cycle}-${e.position}`;
+      const slot    = posCount[posKey] ?? 0;
       posCount[posKey] = slot + 1;
-
       const x = e.position * X_SPACING;
       const y = cycleY + slot * Y_JITTER;
-
-      const dimmed =
-        focusedEventIds !== null && !focusedEventIds.has(e.id);
-
+      if (x > maxX) maxX = x;
       return {
-        id: String(e.id),
+        id:   String(e.id),
         type: "eventNode",
         position: { x, y },
-        data: {
-          event: e,
-          focusCharIds: resolvedFocusGroups,
-          dimmed,
-        } as EventNodeData,
+        data: { event: e, focusCharIds: [], dimmed: false } as EventNodeData,
       };
     });
 
-    const newEdges: Edge[] = allRelations
-      .filter((r) => visibleIds.has(r.fromEventId) && visibleIds.has(r.toEventId))
-      .map((r) => {
-        const style = REL_EDGE_STYLE[r.relationType] ?? REL_EDGE_STYLE.before;
-        const speculative = r.confidence === "speculative";
-        const fromFocused =
-          focusedEventIds === null ||
-          (focusedEventIds.has(r.fromEventId) && focusedEventIds.has(r.toEventId));
+    // Cycle label nodes (left side)
+    const usedCycles = Array.from(new Set(mainEvents.map((e) => e.cycle)));
+    const cycleLabels: Node[] = usedCycles.map((cycle) => ({
+      id:       `cycle-label-${cycle}`,
+      type:     "cycleLabel",
+      position: { x: LABEL_X, y: (CYCLE_Y[cycle] ?? 0) },
+      data:     { label: CYCLE_LABEL[cycle] ?? cycle, color: CYCLE_COLOR[cycle] ?? "#7a8a7a" },
+      draggable:  false,
+      selectable: false,
+      focusable:  false,
+    }));
 
+    // Main timeline edges
+    const mainEdges: Edge[] = allRelations
+      .filter((r) => mainIds.has(r.fromEventId) && mainIds.has(r.toEventId))
+      .map((r) => {
+        const style      = REL_EDGE_STYLE[r.relationType] ?? REL_EDGE_STYLE.before;
+        const speculative = r.confidence === "speculative";
         return {
-          id: `${r.fromEventId}-${r.toEventId}-${r.relationType}`,
+          id:     `${r.fromEventId}-${r.toEventId}-${r.relationType}`,
           source: String(r.fromEventId),
           target: String(r.toEventId),
-          style: {
+          style:  {
             ...style,
             strokeDasharray: speculative ? "3 5" : style.strokeDasharray,
-            opacity: fromFocused ? (speculative ? 0.4 : 0.8) : 0.1,
+            opacity: speculative ? 0.4 : 0.8,
           },
           animated: r.relationType === "causes",
         };
       });
 
-    setNodes(newNodes);
-    setEdges(newEdges);
-  }, [allEvents, allRelations, showLifecycle, focusedEventIds, resolvedFocusGroups, loading, setNodes, setEdges]);
+    // Swimlane nodes + edges
+    const swimNodes: Node[] = [];
+    const swimEdges: Edge[] = [];
 
-  // Character search + select
-  const handleCharSelect = useCallback((slotIdx: number, charId: number) => {
-    setFocusCharGroups((prev) => {
-      const next = [...prev];
-      while (next.length <= slotIdx) next.push([]);
-      // Toggle: if already selected, remove; otherwise set
-      if (next[slotIdx].includes(charId)) {
-        next[slotIdx] = next[slotIdx].filter((id) => id !== charId);
-      } else {
-        next[slotIdx] = [charId];
+    if (swimlaneCharIds.length > 0) {
+      // Separator between main timeline and swimlanes
+      swimNodes.push({
+        id:       "separator",
+        type:     "separator",
+        position: { x: LABEL_X, y: SWIMLANE_Y_START - 50 },
+        data:     { width: maxX - LABEL_X + 400 } as SeparatorData,
+        draggable:  false,
+        selectable: false,
+        focusable:  false,
+      });
+    }
+
+    const charMap = new Map(characters.map((c) => [c.id, c]));
+
+    swimlaneCharIds.forEach((charId, idx) => {
+      const charInfo = charMap.get(charId);
+      if (!charInfo) return;
+
+      const color  = SWIMLANE_COLORS[idx % SWIMLANE_COLORS.length];
+      const swimY  = SWIMLANE_Y_START + idx * SWIMLANE_HEIGHT;
+
+      // All events this character participates in (narrative + lifecycle)
+      const charEvents = allEvents
+        .filter((e) => e.characters.some((c) => c.characterId === charId))
+        .sort((a, b) => a.position - b.position);
+
+      // Label node
+      swimNodes.push({
+        id:       `swim-label-${charId}`,
+        type:     "swimlaneLabel",
+        position: { x: LABEL_X, y: swimY - 4 },
+        data: {
+          name:     charInfo.name,
+          charId,
+          gender:   charInfo.gender,
+          color,
+          onRemove: removeChar,
+        } as SwimlaneLabelData,
+        draggable:  false,
+        selectable: false,
+        focusable:  false,
+      });
+
+      // Event nodes
+      charEvents.forEach((e) => {
+        swimNodes.push({
+          id:   `swim-${charId}-${e.id}`,
+          type: "eventNode",
+          position: { x: e.position * X_SPACING, y: swimY },
+          data: {
+            event: e,
+            focusCharIds: [],
+            dimmed: false,
+            compact: true,
+          } as EventNodeData,
+        });
+      });
+
+      // Spine: dashed line connecting consecutive events
+      for (let i = 0; i < charEvents.length - 1; i++) {
+        swimEdges.push({
+          id:     `spine-${charId}-${charEvents[i].id}-${charEvents[i + 1].id}`,
+          source: `swim-${charId}-${charEvents[i].id}`,
+          target: `swim-${charId}-${charEvents[i + 1].id}`,
+          type:   "straight",
+          style:  { stroke: color + "55", strokeWidth: 1, strokeDasharray: "4 6" },
+        });
       }
-      return next;
     });
-  }, []);
 
-  const clearSlot = useCallback((slotIdx: number) => {
-    setFocusCharGroups((prev) => {
-      const next = [...prev];
-      if (next[slotIdx]) next[slotIdx] = [];
-      return next;
-    });
-    setCharSearch((prev) => {
-      const next = [...prev];
-      next[slotIdx] = "";
-      return next;
-    });
-  }, []);
+    setNodes([...mainNodes, ...cycleLabels, ...swimNodes]);
+    setEdges([...mainEdges, ...swimEdges]);
+  }, [allEvents, allRelations, characters, swimlaneCharIds, loading, removeChar, setNodes, setEdges]);
 
   if (loading) {
     return (
@@ -226,243 +383,141 @@ export default function TimelineGraphPage() {
     usedCycles.includes(c)
   );
 
+  const swimlaneCharMap = new Map(characters.map((c) => [c.id, c]));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)" }}>
-      {/* Header / Controls */}
-      <div style={{ marginBottom: "1rem", flexShrink: 0 }}>
-        {/* Tab bar */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", alignItems: "center" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: "0.75rem", flexShrink: 0 }}>
+
+        {/* Tab bar + character search */}
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
           <Link
             href="/timeline"
             style={{
-              padding: "6px 16px",
-              background: "var(--peat)",
-              color: "var(--slate)",
-              border: "1px solid var(--border)",
-              borderRadius: "2px",
-              textDecoration: "none",
-              fontFamily: "Cinzel, serif",
-              fontSize: "0.75rem",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
+              padding: "6px 16px", background: "var(--peat)", color: "var(--slate)",
+              border: "1px solid var(--border)", borderRadius: "2px",
+              textDecoration: "none", fontFamily: "Cinzel, serif",
+              fontSize: "0.75rem", letterSpacing: "0.12em", textTransform: "uppercase",
             }}
           >
             Liste
           </Link>
-          <div
-            style={{
-              padding: "6px 16px",
-              background: "rgba(200,145,58,0.15)",
-              color: "var(--amber)",
-              border: "1px solid rgba(200,145,58,0.5)",
-              borderRadius: "2px",
-              fontFamily: "Cinzel, serif",
-              fontSize: "0.75rem",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
-          >
+          <div style={{
+            padding: "6px 16px", background: "rgba(200,145,58,0.15)", color: "var(--amber)",
+            border: "1px solid rgba(200,145,58,0.5)", borderRadius: "2px",
+            fontFamily: "Cinzel, serif", fontSize: "0.75rem",
+            letterSpacing: "0.12em", textTransform: "uppercase",
+          }}>
             Graph
           </div>
 
           <div style={{ flex: 1 }} />
 
-          {/* Lifecycle toggle */}
-          <button
-            onClick={() => setShowLifecycle((v) => !v)}
-            style={{
-              padding: "5px 14px",
-              background: showLifecycle ? "rgba(200,145,58,0.2)" : "var(--peat)",
-              color: showLifecycle ? "var(--amber)" : "var(--slate)",
-              border: `1px solid ${showLifecycle ? "var(--amber)" : "var(--border)"}`,
-              borderRadius: "2px",
-              cursor: "pointer",
-              fontFamily: "Cinzel, serif",
-              fontSize: "0.7rem",
-              letterSpacing: "0.1em",
-            }}
-          >
-            ✦✝ Lebensdaten
-          </button>
-        </div>
-
-        {/* Character focus slots */}
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-start" }}>
-          {[0, 1, 2].map((slotIdx) => {
-            const selectedId = focusCharGroups[slotIdx]?.[0];
-            const selectedChar = characters.find((c) => c.id === selectedId);
-            const color = FOCUS_COLORS[slotIdx];
-            const search = charSearch[slotIdx] ?? "";
-            const filtered = search.length > 0
-              ? characters.filter((c) =>
-                  c.name.toLowerCase().includes(search.toLowerCase())
-                )
-              : [];
-
+          {/* Active swimlane chips */}
+          {swimlaneCharIds.map((charId, idx) => {
+            const c = swimlaneCharMap.get(charId);
+            if (!c) return null;
+            const color = SWIMLANE_COLORS[idx % SWIMLANE_COLORS.length];
             return (
-              <div key={slotIdx} style={{ position: "relative", minWidth: 180 }}>
-                <div
+              <div key={charId} style={{
+                display: "flex", alignItems: "center", gap: "0.3rem",
+                padding: "4px 8px 4px 10px",
+                background: color + "18",
+                border: `1px solid ${color}55`,
+                borderRadius: 2,
+                fontFamily: "Cinzel, serif", fontSize: "0.75rem",
+              }}>
+                <span style={{ color }}>{c.name}</span>
+                <button
+                  onClick={() => removeChar(charId)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    border: `1px solid ${selectedChar ? color : "var(--border)"}`,
-                    borderRadius: "2px",
-                    background: "var(--peat)",
-                    overflow: "hidden",
+                    background: "none", border: "none", color: "var(--slate)",
+                    cursor: "pointer", fontSize: "0.85rem", padding: "0 2px", lineHeight: 1,
                   }}
                 >
-                  <div
-                    style={{
-                      width: 4,
-                      alignSelf: "stretch",
-                      background: color,
-                      flexShrink: 0,
-                    }}
-                  />
-                  {selectedChar ? (
-                    <div style={{ display: "flex", alignItems: "center", flex: 1, padding: "5px 8px", gap: "0.4rem" }}>
-                      <span style={{ color, fontSize: "0.8rem", flex: 1, fontFamily: "Cinzel, serif" }}>
-                        {selectedChar.name}
-                      </span>
-                      <button
-                        onClick={() => clearSlot(slotIdx)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--slate)",
-                          cursor: "pointer",
-                          padding: "0 4px",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder={`Charakter ${slotIdx + 1} filtern…`}
-                      value={search}
-                      onChange={(e) =>
-                        setCharSearch((prev) => {
-                          const next = [...prev];
-                          next[slotIdx] = e.target.value;
-                          return next;
-                        })
-                      }
-                      style={{
-                        flex: 1,
-                        background: "transparent",
-                        border: "none",
-                        outline: "none",
-                        color: "var(--mist)",
-                        fontSize: "0.8rem",
-                        padding: "5px 8px",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* Autocomplete dropdown */}
-                {filtered.length > 0 && !selectedChar && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      background: "var(--stone)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "2px",
-                      zIndex: 100,
-                      maxHeight: 200,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {filtered.slice(0, 10).map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => {
-                          handleCharSelect(slotIdx, c.id);
-                          setCharSearch((prev) => {
-                            const next = [...prev];
-                            next[slotIdx] = "";
-                            return next;
-                          });
-                        }}
-                        style={{
-                          padding: "6px 10px",
-                          cursor: "pointer",
-                          color: "var(--mist)",
-                          fontSize: "0.85rem",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "var(--peat)")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "transparent")
-                        }
-                      >
-                        {c.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  ×
+                </button>
               </div>
             );
           })}
 
-          {resolvedFocusGroups.length > 0 && (
-            <button
-              onClick={() => {
-                setFocusCharGroups([]);
-                setCharSearch(["", "", ""]);
-              }}
-              style={{
-                padding: "5px 12px",
-                background: "var(--peat)",
-                color: "var(--slate)",
-                border: "1px solid var(--border)",
-                borderRadius: "2px",
-                cursor: "pointer",
-                fontSize: "0.75rem",
-              }}
-            >
-              Filter löschen
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem", flexShrink: 0 }}>
-        {/* Relation types */}
-        {Object.entries(REL_EDGE_STYLE).map(([key, style]) => (
-          <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            <div
-              style={{
-                width: 24,
-                height: 2,
-                background: style.stroke,
-                opacity: 0.8,
-                borderTop: style.strokeDasharray ? `2px dashed ${style.stroke}` : undefined,
-              }}
-            />
-            <span style={{ fontSize: "0.65rem", color: "var(--slate)", fontFamily: "Cinzel, serif", letterSpacing: "0.08em", textTransform: "capitalize" }}>
-              {key}
-            </span>
+          {/* Character search */}
+          <div style={{ position: "relative" }}>
+            <div style={{
+              display: "flex", alignItems: "center",
+              border: "1px solid var(--border)", borderRadius: 2,
+              background: "var(--peat)", overflow: "visible",
+            }}>
+              <input
+                type="text"
+                placeholder="+ Charakter hinzufügen …"
+                value={charSearch}
+                onChange={(e) => setCharSearch(e.target.value)}
+                style={{
+                  background: "transparent", border: "none", outline: "none",
+                  color: "var(--mist)", fontSize: "0.8rem",
+                  padding: "5px 10px", width: 200,
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+            {searchResults.length > 0 && (
+              <div style={{
+                position: "absolute", top: "100%", left: 0, right: 0,
+                background: "var(--stone)", border: "1px solid var(--border)",
+                borderRadius: 2, zIndex: 100,
+                maxHeight: 220, overflowY: "auto",
+              }}>
+                {searchResults.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => addChar(c.id)}
+                    style={{
+                      padding: "6px 10px", cursor: "pointer",
+                      color: "var(--mist)", fontSize: "0.85rem",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--peat)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {c.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ))}
-        <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1rem", display: "flex", gap: "0.75rem" }}>
-          {cycleOrder.map((c) => (
-            <div key={c} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: CYCLE_COLOR[c] }} />
-              <span style={{ fontSize: "0.65rem", color: "var(--mist)", fontFamily: "Cinzel, serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {CYCLE_LABEL[c]}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+          {Object.entries(REL_EDGE_STYLE).map(([key, style]) => (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <div style={{
+                width: 24, height: 2, background: style.stroke, opacity: 0.8,
+                borderTop: style.strokeDasharray ? `2px dashed ${style.stroke}` : undefined,
+              }} />
+              <span style={{
+                fontSize: "0.65rem", color: "var(--slate)",
+                fontFamily: "Cinzel, serif", letterSpacing: "0.08em", textTransform: "capitalize",
+              }}>
+                {key}
               </span>
             </div>
           ))}
+          <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1rem", display: "flex", gap: "0.75rem" }}>
+            {cycleOrder.map((c) => (
+              <div key={c} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: CYCLE_COLOR[c] }} />
+                <span style={{
+                  fontSize: "0.65rem", color: "var(--mist)",
+                  fontFamily: "Cinzel, serif", letterSpacing: "0.08em", textTransform: "uppercase",
+                }}>
+                  {CYCLE_LABEL[c]}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -475,29 +530,25 @@ export default function TimelineGraphPage() {
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
-          minZoom={0.1}
+          fitViewOptions={{ padding: 0.12 }}
+          minZoom={0.05}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
           style={{ background: "var(--stone)" }}
         >
           <Background color="var(--border)" gap={24} />
-          <Controls
-            style={{
-              background: "var(--bark)",
-              border: "1px solid var(--border)",
-              borderRadius: "4px",
-            }}
-          />
+          <Controls style={{ background: "var(--bark)", border: "1px solid var(--border)", borderRadius: "4px" }} />
           <MiniMap
-            style={{
-              background: "var(--bark)",
-              border: "1px solid var(--border)",
-              borderRadius: "4px",
-            }}
+            style={{ background: "var(--bark)", border: "1px solid var(--border)", borderRadius: "4px" }}
             nodeColor={(node) => {
-              const data = node.data as EventNodeData;
-              return CYCLE_COLOR[data.event.cycle ?? "other"] ?? "#7a8a7a";
+              if (node.type === "eventNode") {
+                const d = node.data as EventNodeData;
+                return CYCLE_COLOR[d.event?.cycle ?? "other"] ?? "#7a8a7a";
+              }
+              if (node.type === "swimlaneLabel") {
+                return (node.data as SwimlaneLabelData).color;
+              }
+              return "var(--border)";
             }}
             maskColor="rgba(10,14,10,0.7)"
           />

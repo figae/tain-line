@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tain Line
 
-## Getting Started
+Ein **Mythologie-Wissensgraph** zur strukturierten Erfassung, Verwaltung und Darstellung von Informationen aus irisch-keltischen Mythen und Sagen.
 
-First, run the development server:
+## Zweck
+
+Aus den überlieferten Sagen (Cath Maige Tuired, Táin Bó Cúailnge, Lebor Gabála Érenn u.a.) werden alle extrahierbaren Informationen strukturiert erfasst: Charaktere, Ereignisse, Relationen, Orte, Gruppen — jede Information verknüpft mit Quellenangabe und Originalzitat. Daraus entstehen ein Wissensgraph und eine interaktive Darstellung, die "Pseudo-Schlussfolgerungen" und Zusammenhänge sichtbar macht, die im Fliesstext der Quellen verborgen bleiben.
+
+Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, etc.).
+
+**Kernprinzip:** Jede Information muss durch einen Menschen geprüft und freigegeben werden, bevor sie in die Datenhaltung einfliesst.
+
+## Features (aktueller Stand)
+
+- **Charakterprofile** — mit Eigenschaften, Epitheta, Gruppen- und Quellenzugehörigkeit
+- **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter (ReactFlow)
+- **Timeline-Graph** — chronologischer Ereignisgraph mit Zyklen (Mythologisch / Ulster / Fenian / Könige) und Charakter-Swimlanes
+- **Events** — Schlachten, Krönungen, Reisen, Prophezeiungen u.a. mit Typisierung und Quellenverknüpfung
+- **Seed-Daten** — Basisdatensatz irisch-keltische Mythologie (CMT-Deep, Core)
+
+## Entwicklungsplan
+
+Siehe [`plan.md`](./plan.md) für die vollständige Roadmap (P0–P6).
+
+Kurzübersicht:
+- **P0** — Authentifizierung + Approval-Workflow-Schema
+- **P1** — KI-gestützte Datenerfassung mit Review-Queue
+- **P2** — Datenqualität, Vollständigkeit, Duplikatserkennung
+- **P3** — UI-Verfeinerung, keltisches Theme, Suche
+- **P4** — Weitere Mythologien, Export, Erweiterungen
+- **P5** — Server-Deployment, CI/CD, Betrieb
+- **P6** — UI-Optimierung & Mobile App
+
+## Lokale Entwicklung
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App läuft auf [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Datenbank
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run db:migrate          # Schema-Migrationen ausführen
+npm run db:seed core        # Basisdaten laden
+npm run db:seed cmt-deep    # Cath Maige Tuired Tiefendaten laden
+npm run db:reset core       # DB zurücksetzen und neu befüllen
+```
 
-## Learn More
+### Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test                    # Unit Tests (Vitest)
+npm run test:e2e            # End-to-End Tests (Playwright)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Technologie-Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Bereich | Technologie |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Datenbank | SQLite via better-sqlite3 |
+| ORM | Drizzle ORM |
+| Graph-Visualisierung | @xyflow/react (ReactFlow) |
+| Tests | Vitest + Playwright |
+| Sprache | TypeScript |
 
-## Deploy on Vercel
+## Quellen
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [CELT — Corpus of Electronic Texts](https://celt.ucc.ie/) — Digitalisierte Primärquellen
+- [Cath Maige Tuired](https://celt.ucc.ie/published/T300010/)
+- [Lebor Gabála Érenn](https://celt.ucc.ie/published/T100055/)
+- [Táin Bó Cúailnge](https://celt.ucc.ie/published/T301035/)

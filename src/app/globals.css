@@ -192,3 +192,95 @@ input:focus, select:focus, textarea:focus {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* ── Celtic page section header with knotwork side lines ─────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-header::before,
+.section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+}
+
+/* ── Decorative knotwork corner variant (all four corners) ───────────── */
+.celtic-frame {
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.celtic-frame::before {
+  content: '᚛';
+  position: absolute;
+  top: -0.6em;
+  left: 0.5rem;
+  color: var(--gold);
+  background: var(--bark);
+  padding: 0 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* ── Page fade-in ────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+/* ── Source quote ────────────────────────────────────────────────────── */
+.source-quote {
+  border-left: 2px solid var(--amber);
+  padding: 0.4rem 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--slate);
+  font-style: italic;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.source-quote .attribution {
+  display: block;
+  margin-top: 0.3rem;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.05em;
+}
+
+/* ── Review queue action buttons ─────────────────────────────────────── */
+.btn-review {
+  padding: 4px 14px;
+  border: 1px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.btn-approve {
+  background: rgba(100,180,100,0.15);
+  color: #78c878;
+  border-color: #78c87844;
+}
+.btn-reject {
+  background: rgba(200,100,100,0.15);
+  color: #c87878;
+  border-color: #c8787844;
+}
+.btn-secondary {
+  background: var(--peat);
+  color: var(--slate);
+  border-color: var(--border);
+}

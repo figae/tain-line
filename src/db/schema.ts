@@ -23,6 +23,13 @@ export const sources = sqliteTable("sources", {
 });
 
 // ─────────────────────────────────────────────
+// APPROVAL WORKFLOW
+// ─────────────────────────────────────────────
+// Added to characters, events, places, groups, familyRelations.
+// status defaults to 'approved' so existing seed data stays visible.
+// ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
 // GROUPS / TRIBES
 // ─────────────────────────────────────────────
 export const groups = sqliteTable("groups", {
@@ -31,6 +38,11 @@ export const groups = sqliteTable("groups", {
   altNames: text("alt_names"),
   description: text("description"),
   sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
@@ -46,7 +58,14 @@ export const characters = sqliteTable("characters", {
   epithet: text("epithet"),
   isDeity: integer("is_deity", { mode: "boolean" }).default(false),
   isDead: integer("is_dead", { mode: "boolean" }).default(false),
+  mythology: text("mythology").default("celtic-irish"),  // extensible: celtic-irish | greek | norse
   sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  confidence: text("confidence", { enum: ["established", "probable", "speculative"] }).default("established"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
@@ -93,6 +112,11 @@ export const familyRelations = sqliteTable("family_relations", {
   }).notNull(),
   notes: text("notes"),
   sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
 });
 
 // ─────────────────────────────────────────────
@@ -108,6 +132,11 @@ export const places = sqliteTable("places", {
   modernEquivalent: text("modern_equivalent"),
   description: text("description"),
   sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
 });
 
 // ─────────────────────────────────────────────
@@ -150,8 +179,15 @@ export const events = sqliteTable("events", {
   // For birth/death events: which character does this lifecycle event belong to?
   characterId: integer("character_id").references(() => characters.id),
   cycle: text("cycle", { enum: mythologicalCycles }).default("other"),
+  mythology: text("mythology").default("celtic-irish"),  // extensible
   approximateEra: text("approximate_era"),
   sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  confidence: text("confidence", { enum: ["established", "probable", "speculative"] }).default("established"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 

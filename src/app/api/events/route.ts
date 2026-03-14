@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
+import { eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -7,7 +8,7 @@ export async function GET(req: NextRequest) {
   const eventType = searchParams.get("eventType");
   const parentId = searchParams.get("parentId");
 
-  let events = await db.select().from(schema.events);
+  let events = await db.select().from(schema.events).where(eq(schema.events.status, "approved"));
 
   if (cycle)      events = events.filter((e) => e.cycle === cycle);
   if (eventType)  events = events.filter((e) => e.eventType === eventType);

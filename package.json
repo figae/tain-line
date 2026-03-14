@@ -17,6 +17,7 @@
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@types/better-sqlite3": "^7.6.13",
     "@xyflow/react": "^12.10.1",
     "better-sqlite3": "^12.6.2",
