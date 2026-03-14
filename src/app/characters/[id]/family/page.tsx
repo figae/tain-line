@@ -75,13 +75,31 @@ const NODE_H   = 70;
 const GEN_GAP  = 220; // vertical gap between generations
 const NODE_GAP = 200; // horizontal gap between nodes in same generation
 
+// Relations that connect nodes horizontally (same generation)
+const LATERAL_RELS = new Set(["spouse", "lover", "sibling", "half_sibling", "aspect", "other"]);
+
 function buildLayout(
   apiNodes: ApiNode[],
+  apiEdges: ApiEdge[],
   showLateral: boolean
 ): FamilyFlowNode[] {
   const visible = showLateral
     ? apiNodes
     : apiNodes.filter((n) => n.role !== "lateral");
+
+  const visibleSet = new Set(visible.map((n) => n.id));
+
+  // Build a map of lateralId → bloodline partnerId (via spouse/lover edges)
+  const partnerOf = new Map<number, number>();
+  for (const e of apiEdges) {
+    if (!LATERAL_RELS.has(e.relationType)) continue;
+    if (!visibleSet.has(e.fromId) || !visibleSet.has(e.toId)) continue;
+    const from = apiNodes.find((n) => n.id === e.fromId);
+    const to   = apiNodes.find((n) => n.id === e.toId);
+    if (!from || !to || from.generation !== to.generation) continue;
+    if (from.role === "lateral" && to.role !== "lateral") partnerOf.set(from.id, to.id);
+    if (to.role   === "lateral" && from.role !== "lateral") partnerOf.set(to.id, from.id);
+  }
 
   // Group by generation
   const byGen = new Map<number, ApiNode[]>();
@@ -93,31 +111,40 @@ function buildLayout(
   const result: FamilyFlowNode[] = [];
 
   for (const [gen, nodes] of byGen) {
-    // Within each generation: bloodline/focus nodes first (centre), then lateral
-    const sorted = [
-      ...nodes.filter((n) => n.role === "focus"),
-      ...nodes.filter((n) => n.role === "bloodline"),
-      ...nodes.filter((n) => n.role === "lateral"),
-    ];
-    const total = sorted.length;
-    const totalW = (total - 1) * NODE_GAP;
+    const coreNodes    = nodes.filter((n) => n.role !== "lateral");
+    const lateralNodes = nodes.filter((n) => n.role === "lateral");
 
-    sorted.forEach((n, i) => {
+    // Y is negated so that positive-gen ancestors appear above (negative y = top of screen)
+    const y = -gen * GEN_GAP;
+
+    // Lay out core nodes centred horizontally
+    const totalW = (coreNodes.length - 1) * NODE_GAP;
+    const corePos = new Map<number, number>(); // id → x
+
+    coreNodes.forEach((n, i) => {
+      const x = i * NODE_GAP - totalW / 2;
+      corePos.set(n.id, x);
       result.push({
         id:   String(n.id),
         type: "familyNode" as const,
-        position: {
-          x: i * NODE_GAP - totalW / 2,
-          y: gen * GEN_GAP,
-        },
-        data: {
-          id:         n.id,
-          name:       n.name,
-          gender:     n.gender,
-          isDeity:    n.isDeity,
-          generation: n.generation,
-          role:       n.role,
-        },
+        position: { x, y },
+        data: { id: n.id, name: n.name, gender: n.gender, isDeity: n.isDeity, generation: n.generation, role: n.role },
+      });
+    });
+
+    // Place lateral nodes immediately to the right of their bloodline partner,
+    // or at the end of the row if no partner is found.
+    let lateralOffset = coreNodes.length * NODE_GAP - totalW / 2; // fallback x
+    lateralNodes.forEach((n) => {
+      const anchorId = partnerOf.get(n.id);
+      const anchorX  = anchorId !== undefined ? corePos.get(anchorId) : undefined;
+      const x = anchorX !== undefined ? anchorX + NODE_GAP : lateralOffset;
+      if (anchorX === undefined) lateralOffset += NODE_GAP;
+      result.push({
+        id:   String(n.id),
+        type: "familyNode" as const,
+        position: { x, y },
+        data: { id: n.id, name: n.name, gender: n.gender, isDeity: n.isDeity, generation: n.generation, role: n.role },
       });
     });
   }
@@ -163,24 +190,48 @@ export default function FamilyTreePage() {
     return new Set(visible.map((n) => n.id));
   }, [apiNodes, showLateral]);
 
-  useEffect(() => {
-    const layoutNodes = buildLayout(apiNodes, showLateral);
-    setNodes(layoutNodes);
+  const buildFlowEdges = useCallback((layoutNodes: FamilyFlowNode[]) => {
+    // Position map for explicit handle routing on lateral edges
+    const posMap = new Map(layoutNodes.map((n) => [parseInt(n.id), n.position]));
 
-    const flowEdges: Edge[] = apiEdges
+    return apiEdges
       .filter((e) => visibleIds.has(e.fromId) && visibleIds.has(e.toId))
-      .map((e) => ({
-        id:           `${e.fromId}-${e.toId}-${e.relationType}`,
-        source:       String(e.fromId),
-        target:       String(e.toId),
-        label:        REL_LABEL[e.relationType] ?? e.relationType,
-        labelStyle:   { fontSize: 9, fill: "var(--slate)", fontFamily: "Cinzel, serif" },
-        labelBgStyle: { fill: "var(--peat)", fillOpacity: 0.85 },
-        style:        { stroke: EDGE_COLOR[e.relationType] ?? "#6a7a6a", strokeWidth: 1.5 },
-        type:         "smoothstep",
-      }));
-    setEdges(flowEdges);
-  }, [apiNodes, apiEdges, showLateral, visibleIds, setNodes, setEdges]);
+      .map((e) => {
+        const isLateral = LATERAL_RELS.has(e.relationType);
+        let sourceHandle: string | undefined;
+        let targetHandle: string | undefined;
+
+        if (isLateral) {
+          const fromX = posMap.get(e.fromId)?.x ?? 0;
+          const toX   = posMap.get(e.toId)?.x ?? 0;
+          if (fromX <= toX) { sourceHandle = "right"; targetHandle = "left"; }
+          else              { sourceHandle = "left";  targetHandle = "right"; }
+        }
+
+        return {
+          id:           `${e.fromId}-${e.toId}-${e.relationType}`,
+          source:       String(e.fromId),
+          target:       String(e.toId),
+          sourceHandle,
+          targetHandle,
+          label:        REL_LABEL[e.relationType] ?? e.relationType,
+          labelStyle:   { fontSize: 9, fill: "var(--slate)", fontFamily: "Cinzel, serif" },
+          labelBgStyle: { fill: "var(--peat)", fillOpacity: 0.85 },
+          style:        { stroke: EDGE_COLOR[e.relationType] ?? "#6a7a6a", strokeWidth: 1.5 },
+          type:         "smoothstep",
+        } satisfies Edge;
+      });
+  }, [apiEdges, visibleIds]);
+
+  const applyLayout = useCallback(() => {
+    const layoutNodes = buildLayout(apiNodes, apiEdges, showLateral);
+    setNodes(layoutNodes);
+    setEdges(buildFlowEdges(layoutNodes));
+  }, [apiNodes, apiEdges, showLateral, setNodes, setEdges, buildFlowEdges]);
+
+  useEffect(() => {
+    applyLayout();
+  }, [applyLayout]);
 
   if (loading) {
     return (
@@ -237,6 +288,25 @@ export default function FamilyTreePage() {
             </div>
           ))}
         </div>
+
+        {/* Reset layout button */}
+        <button
+          onClick={applyLayout}
+          style={{
+            padding: "4px 12px",
+            background: "var(--peat)",
+            color: "var(--slate)",
+            border: "1px solid var(--border)",
+            borderRadius: 2,
+            cursor: "pointer",
+            fontFamily: "Cinzel, serif",
+            fontSize: "0.65rem",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}
+        >
+          Layout zurücksetzen
+        </button>
 
         {/* Lateral toggle */}
         <button

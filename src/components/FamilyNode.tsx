@@ -49,10 +49,10 @@ function FamilyNode({ data }: { data: FamilyNodeData }) {
 
   return (
     <>
-      <Handle type="target" position={Position.Top}    style={{ opacity: 0 }} />
-      <Handle type="target" position={Position.Left}   style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Right}  style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Top}    id="top"    style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Left}   id="left"   style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Right}  id="right"  style={{ opacity: 0 }} />
 
       <div
         onClick={() => router.push(`/characters/${data.id}/family`)}
