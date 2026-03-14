@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
-
-function safeParseJson<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeParseJson } from "@/lib/json";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

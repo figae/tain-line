@@ -143,53 +143,62 @@ export async function POST(req: NextRequest) {
 
   const results: Record<string, number[]> = { characters: [], events: [], places: [], groups: [], relations: [] };
 
-  // Characters
-  for (const c of extracted.characters ?? []) {
-    const rows = await db.insert(schema.characters).values({
-      name: c.name,
-      altNames: c.altNames ? JSON.stringify(c.altNames) : null,
-      gender: (c.gender as "male" | "female" | "other" | "unknown") ?? "unknown",
-      isDeity: c.isDeity ?? false,
-      epithet: c.epithet ?? null,
-      description: c.description ?? null,
-      sourceId: sourceId ?? null,
-      status: "pending_review",
-      sourceQuote: c.sourceQuote,
-      proposedBy: "ai",
-    }).returning({ id: schema.characters.id });
-    results.characters.push(rows[0].id);
+  // Characters — batch insert
+  const chars = extracted.characters ?? [];
+  if (chars.length > 0) {
+    const rows = await db.insert(schema.characters).values(
+      chars.map((c) => ({
+        name: c.name,
+        altNames: c.altNames ? JSON.stringify(c.altNames) : null,
+        gender: (c.gender as "male" | "female" | "other" | "unknown") ?? "unknown",
+        isDeity: c.isDeity ?? false,
+        epithet: c.epithet ?? null,
+        description: c.description ?? null,
+        sourceId: sourceId ?? null,
+        status: "pending_review" as const,
+        sourceQuote: c.sourceQuote,
+        proposedBy: "ai" as const,
+      })),
+    ).returning({ id: schema.characters.id });
+    results.characters = rows.map((r) => r.id);
   }
 
-  // Events
-  for (const e of extracted.events ?? []) {
-    const rows = await db.insert(schema.events).values({
-      name: e.name,
-      description: e.description ?? null,
-      eventType: (e.eventType as typeof schema.events.$inferInsert["eventType"]) ?? "other",
-      cycle: (e.cycle as typeof schema.events.$inferInsert["cycle"]) ?? "other",
-      sourceId: sourceId ?? null,
-      status: "pending_review",
-      sourceQuote: e.sourceQuote,
-      proposedBy: "ai",
-    }).returning({ id: schema.events.id });
-    results.events.push(rows[0].id);
+  // Events — batch insert
+  const evts = extracted.events ?? [];
+  if (evts.length > 0) {
+    const rows = await db.insert(schema.events).values(
+      evts.map((e) => ({
+        name: e.name,
+        description: e.description ?? null,
+        eventType: (e.eventType as typeof schema.events.$inferInsert["eventType"]) ?? "other",
+        cycle: (e.cycle as typeof schema.events.$inferInsert["cycle"]) ?? "other",
+        sourceId: sourceId ?? null,
+        status: "pending_review" as const,
+        sourceQuote: e.sourceQuote,
+        proposedBy: "ai" as const,
+      })),
+    ).returning({ id: schema.events.id });
+    results.events = rows.map((r) => r.id);
   }
 
-  // Places
-  for (const p of extracted.places ?? []) {
-    const rows = await db.insert(schema.places).values({
-      name: p.name,
-      type: (p.type as typeof schema.places.$inferInsert["type"]) ?? "other",
-      description: p.description ?? null,
-      sourceId: sourceId ?? null,
-      status: "pending_review",
-      sourceQuote: p.sourceQuote,
-      proposedBy: "ai",
-    }).returning({ id: schema.places.id });
-    results.places.push(rows[0].id);
+  // Places — batch insert
+  const plcs = extracted.places ?? [];
+  if (plcs.length > 0) {
+    const rows = await db.insert(schema.places).values(
+      plcs.map((p) => ({
+        name: p.name,
+        type: (p.type as typeof schema.places.$inferInsert["type"]) ?? "other",
+        description: p.description ?? null,
+        sourceId: sourceId ?? null,
+        status: "pending_review" as const,
+        sourceQuote: p.sourceQuote,
+        proposedBy: "ai" as const,
+      })),
+    ).returning({ id: schema.places.id });
+    results.places = rows.map((r) => r.id);
   }
 
-  // Groups — onConflictDoNothing because name is UNIQUE
+  // Groups — onConflictDoNothing because name is UNIQUE; must insert one-by-one to collect ids
   for (const g of extracted.groups ?? []) {
     const rows = await db.insert(schema.groups).values({
       name: g.name,

@@ -257,3 +257,30 @@ input:focus, select:focus, textarea:focus {
   font-family: 'Cinzel', serif;
   letter-spacing: 0.05em;
 }
+
+/* ── Review queue action buttons ─────────────────────────────────────── */
+.btn-review {
+  padding: 4px 14px;
+  border: 1px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.btn-approve {
+  background: rgba(100,180,100,0.15);
+  color: #78c878;
+  border-color: #78c87844;
+}
+.btn-reject {
+  background: rgba(200,100,100,0.15);
+  color: #c87878;
+  border-color: #c8787844;
+}
+.btn-secondary {
+  background: var(--peat);
+  color: var(--slate);
+  border-color: var(--border);
+}

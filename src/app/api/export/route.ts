@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { safeParseJson } from "@/lib/json";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -70,7 +71,7 @@ function buildJsonLd(
     "@type": c.isDeity ? ["Person", "tain:Deity"] : "Person",
     "@id": `tain:character/${c.id}`,
     "name": c.name,
-    "alternateName": c.altNames ? tryParseJson<string[]>(c.altNames, []) : [],
+    "alternateName": c.altNames ? safeParseJson<string[]>(c.altNames, []) : [],
     "description": c.description,
     "gender": c.gender,
     "epithet": c.epithet,
@@ -93,7 +94,7 @@ function buildJsonLd(
     "@type": "Place",
     "@id": `tain:place/${p.id}`,
     "name": p.name,
-    "alternateName": p.altNames ? tryParseJson<string[]>(p.altNames, []) : [],
+    "alternateName": p.altNames ? safeParseJson<string[]>(p.altNames, []) : [],
     "description": p.description,
     "additionalType": p.type,
   }));
@@ -102,7 +103,7 @@ function buildJsonLd(
     "@type": "Organization",
     "@id": `tain:group/${g.id}`,
     "name": g.name,
-    "alternateName": g.altNames ? tryParseJson<string[]>(g.altNames, []) : [],
+    "alternateName": g.altNames ? safeParseJson<string[]>(g.altNames, []) : [],
     "description": g.description,
   }));
 
@@ -127,6 +128,3 @@ function buildJsonLd(
   };
 }
 
-function tryParseJson<T>(val: string, fallback: T): T {
-  try { return JSON.parse(val) as T; } catch { return fallback; }
-}

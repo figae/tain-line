@@ -86,19 +86,6 @@ export default function ReviewPage() {
     return String(item.name ?? item.id);
   };
 
-  const btnStyle = (variant: "approve" | "reject" | "secondary"): React.CSSProperties => ({
-    padding: "4px 14px",
-    border: "1px solid",
-    borderRadius: 2,
-    cursor: "pointer",
-    fontFamily: "Cinzel, serif",
-    fontSize: "0.65rem",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    background: variant === "approve" ? "rgba(100,180,100,0.15)" : variant === "reject" ? "rgba(200,100,100,0.15)" : "var(--peat)",
-    color: variant === "approve" ? "#78c878" : variant === "reject" ? "#c87878" : "var(--slate)",
-    borderColor: variant === "approve" ? "#78c87844" : variant === "reject" ? "#c8787844" : "var(--border)",
-  });
 
   if (loading) {
     return (
@@ -230,14 +217,14 @@ export default function ReviewPage() {
                   <button
                     onClick={() => handleAction(activeType, item.id, "approve")}
                     disabled={processing === item.id}
-                    style={btnStyle("approve")}
+                    className="btn-review btn-approve"
                   >
                     Freigeben
                   </button>
                   <button
                     onClick={() => setRejectId({ type: activeType, id: item.id })}
                     disabled={processing === item.id}
-                    style={btnStyle("reject")}
+                    className="btn-review btn-reject"
                   >
                     Ablehnen
                   </button>
@@ -265,13 +252,13 @@ export default function ReviewPage() {
                   />
                   <button
                     onClick={() => handleAction(activeType, item.id, "reject", rejectNotes)}
-                    style={btnStyle("reject")}
+                    className="btn-review btn-reject"
                   >
                     Bestätigen
                   </button>
                   <button
                     onClick={() => { setRejectId(null); setRejectNotes(""); }}
-                    style={btnStyle("secondary")}
+                    className="btn-review btn-secondary"
                   >
                     Abbrechen
                   </button>
