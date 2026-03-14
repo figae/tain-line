@@ -21,17 +21,18 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
+    const safeJson = (r: Response) => r.ok ? r.json() : Promise.resolve([]);
     Promise.all([
-      fetch("/api/characters").then((r) => r.json()),
-      fetch("/api/events").then((r) => r.json()),
-      fetch("/api/sources").then((r) => r.json()),
-      fetch("/api/groups").then((r) => r.json()),
+      fetch("/api/characters").then(safeJson).catch(() => []),
+      fetch("/api/events").then(safeJson).catch(() => []),
+      fetch("/api/sources").then(safeJson).catch(() => []),
+      fetch("/api/groups").then(safeJson).catch(() => []),
     ]).then(([chars, events, sources, groups]) => {
       setStats({
-        characters: chars.length,
-        events: events.length,
-        sources: sources.length,
-        groups: groups.length,
+        characters: Array.isArray(chars) ? chars.length : 0,
+        events: Array.isArray(events) ? events.length : 0,
+        sources: Array.isArray(sources) ? sources.length : 0,
+        groups: Array.isArray(groups) ? groups.length : 0,
       });
     });
   }, []);
