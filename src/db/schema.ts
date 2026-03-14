@@ -64,6 +64,7 @@ export const characters = sqliteTable("characters", {
   proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
   reviewedAt: text("reviewed_at"),
   reviewNotes: text("review_notes"),
+  confidence: text("confidence", { enum: ["established", "probable", "speculative"] }).default("established"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
@@ -184,6 +185,7 @@ export const events = sqliteTable("events", {
   proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
   reviewedAt: text("reviewed_at"),
   reviewNotes: text("review_notes"),
+  confidence: text("confidence", { enum: ["established", "probable", "speculative"] }).default("established"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 

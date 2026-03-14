@@ -149,6 +149,7 @@ const approvalCols = [
   "proposed_by  TEXT DEFAULT 'human'",
   "reviewed_at  TEXT",
   "review_notes TEXT",
+  "confidence   TEXT DEFAULT 'established'",
 ];
 
 const approvalTables = ["characters", "events", "places", "groups", "family_relations"];

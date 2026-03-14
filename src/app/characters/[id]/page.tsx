@@ -132,6 +132,73 @@ const EVENT_TYPE_META: Record<string, { icon: string; color: string; label: stri
   other:          { icon: "◆", color: "var(--slate)", label: "Ereignis"     },
 };
 
+// ── Completeness bar ─────────────────────────────────────────────────────────
+
+interface CompletenessCheckItem {
+  label: string;
+  ok: boolean;
+}
+
+function CompletenessBar({ char, lifecycleEvents }: {
+  char: CharDetail;
+  lifecycleEvents: CharDetail["events"];
+}) {
+  const checks: CompletenessCheckItem[] = [
+    { label: "Beschreibung",  ok: !!char.description },
+    { label: "Epitheton",     ok: !!char.epithet },
+    { label: "Geburt",        ok: lifecycleEvents.some((e) => e.eventType === "birth") },
+    { label: "Tod",           ok: lifecycleEvents.some((e) => e.eventType === "death") },
+    { label: "Relation",      ok: char.family.from.length + char.family.to.length > 0 },
+    { label: "Quelle",        ok: !!char.source },
+    { label: "Eigenschaften", ok: char.properties.length > 0 },
+    { label: "Gruppe",        ok: char.groups.length > 0 },
+  ];
+
+  const score = checks.filter((c) => c.ok).length;
+  const pct   = Math.round((score / checks.length) * 100);
+  const color = pct >= 75 ? "#78c878" : pct >= 50 ? "#e0a84a" : "#c87878";
+
+  return (
+    <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--border)", paddingTop: "0.85rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "Cinzel, serif", fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--slate)" }}>
+          Vollständigkeit
+        </span>
+
+        {/* Progress bar */}
+        <div style={{ width: 80, height: 4, background: "var(--peat)", borderRadius: 2, position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.3s" }} />
+        </div>
+
+        <span style={{ fontSize: "0.65rem", color, fontFamily: "Cinzel, serif" }}>{pct}%</span>
+
+        {/* Individual chips */}
+        <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+          {checks.map((c) => (
+            <span
+              key={c.label}
+              style={{
+                fontSize: "0.58rem",
+                padding: "1px 7px",
+                borderRadius: 10,
+                background: c.ok ? `${color}22` : "var(--peat)",
+                color: c.ok ? color : "var(--slate)",
+                border: `1px solid ${c.ok ? `${color}44` : "var(--border)"}`,
+                fontFamily: "Cinzel, serif",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {c.ok ? "✓" : "·"} {c.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function buildRelations(family: CharDetail["family"]): RelationItem[] {
   const items: RelationItem[] = [];
 
@@ -337,6 +404,9 @@ export default function CharacterDetail() {
             {char.source.year && ` (${char.source.year})`}
           </div>
         )}
+
+        {/* Completeness indicator */}
+        <CompletenessBar char={char} lifecycleEvents={lifecycleEvents} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
