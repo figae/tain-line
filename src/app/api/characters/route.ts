@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
+import { eq } from "drizzle-orm";
 
 function safeParseJson<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
@@ -25,7 +26,8 @@ export async function GET(req: NextRequest) {
       isDead: schema.characters.isDead,
       description: schema.characters.description,
     })
-    .from(schema.characters);
+    .from(schema.characters)
+    .where(eq(schema.characters.status, "approved"));
 
   let filtered = chars;
   if (q) {

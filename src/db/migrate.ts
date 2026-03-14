@@ -141,5 +141,29 @@ for (const statement of schema
   }
 }
 
+// ── P1: Approval workflow columns ─────────────────────────────────────────
+// ALTER TABLE is idempotent via try/catch — safe to re-run.
+const approvalCols = [
+  "status       TEXT DEFAULT 'approved'",
+  "source_quote TEXT",
+  "proposed_by  TEXT DEFAULT 'human'",
+  "reviewed_at  TEXT",
+  "review_notes TEXT",
+];
+
+const approvalTables = ["characters", "events", "places", "groups", "family_relations"];
+
+for (const table of approvalTables) {
+  for (const col of approvalCols) {
+    const colName = col.split(/\s+/)[0];
+    try {
+      sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${col};`);
+    } catch {
+      // Column already exists — ignore
+    }
+    void colName; // suppress unused warning
+  }
+}
+
 console.log("✓ Database schema created/updated at", DB_PATH);
 sqlite.close();

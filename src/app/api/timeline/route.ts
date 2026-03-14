@@ -13,7 +13,7 @@ const CYCLE_ORDER: Record<string, number> = {
 
 export async function GET() {
   const [events, relations, allEventChars] = await Promise.all([
-    db.select().from(schema.events),
+    db.select().from(schema.events).where(eq(schema.events.status, "approved")),
     db.select().from(schema.eventRelations),
     db
       .select({
