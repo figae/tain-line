@@ -276,6 +276,27 @@ export default function CharacterDetail() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end" }}>
+            <Link
+              href={`/characters/${char.id}/family`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "5px 14px",
+                background: "rgba(200,145,58,0.1)",
+                border: "1px solid rgba(200,145,58,0.4)",
+                borderRadius: "2px",
+                color: "var(--amber)",
+                textDecoration: "none",
+                fontFamily: "Cinzel, serif",
+                fontSize: "0.7rem",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: "0.25rem",
+              }}
+            >
+              ᚄ Stammbaum
+            </Link>
             {char.groups.map((g) => (
               <span key={g.id} className="badge" style={{ background: "rgba(61,74,46,0.3)", color: "var(--sage)", border: "1px solid rgba(61,74,46,0.6)", fontSize: "0.7rem" }}>
                 {g.name}
