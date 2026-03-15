@@ -11,7 +11,7 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 
-const DB_PATH = path.join(process.cwd(), "data", "tain-line.db");
+const DB_PATH = path.join(__dirname, "../../data/tain-line.db");
 
 // Delete the DB file entirely for a clean start
 if (fs.existsSync(DB_PATH)) {

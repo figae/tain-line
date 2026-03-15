@@ -12,7 +12,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "tain-line.db");
+const DB_PATH = path.join(__dirname, "../../data/tain-line.db");
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 // Discover all seed files

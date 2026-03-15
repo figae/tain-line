@@ -2,12 +2,155 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as schema from "./schema";
 import path from "path";
+import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "tain-line.db");
+// Anchor the DB path to this file's location (src/db/) → project root / data
+// This is immune to process.cwd() differences between the migration runner
+// and the Next.js server process.
+const DB_PATH = path.join(__dirname, "../../data/tain-line.db");
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const sqlite = new Database(DB_PATH);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
+// ── Inline migration — runs every time the module loads, fully idempotent ──
+// CREATE TABLE IF NOT EXISTS: safe to re-run; never loses data.
+// ALTER TABLE ADD COLUMN: each is wrapped in try/catch; silently skipped if
+// the column already exists. New columns added here must also be added to
+// schema.ts so that Drizzle generates the correct SQL.
+
+const createTables = /* sql */ `
+CREATE TABLE IF NOT EXISTS sources (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  title      TEXT NOT NULL,
+  type       TEXT NOT NULL CHECK(type IN ('manuscript','scholarly','online','folklore')),
+  author     TEXT,
+  year       INTEGER,
+  url        TEXT,
+  notes      TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS groups (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL UNIQUE,
+  alt_names   TEXT,
+  description TEXT,
+  source_id   INTEGER REFERENCES sources(id),
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS characters (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  alt_names   TEXT,
+  gender      TEXT DEFAULT 'unknown' CHECK(gender IN ('male','female','other','unknown')),
+  description TEXT,
+  epithet     TEXT,
+  is_deity    INTEGER DEFAULT 0,
+  is_dead     INTEGER DEFAULT 0,
+  source_id   INTEGER REFERENCES sources(id),
+  created_at  TEXT DEFAULT (datetime('now')),
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS character_groups (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  group_id     INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  source_id    INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS character_properties (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  type         TEXT NOT NULL CHECK(type IN ('color','animal','weapon','clothing','place','epithet','attribute','skill','other')),
+  value        TEXT NOT NULL,
+  notes        TEXT,
+  source_id    INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS family_relations (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  to_character_id   INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  relation_type     TEXT NOT NULL CHECK(relation_type IN ('father','mother','child','sibling','half_sibling','spouse','lover','foster_parent','foster_child','uncle','aunt','nephew','niece','grandparent','grandchild','aspect','other')),
+  notes             TEXT,
+  source_id         INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS places (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  name              TEXT NOT NULL,
+  alt_names         TEXT,
+  type              TEXT DEFAULT 'other' CHECK(type IN ('otherworld','hill','island','plain','forest','river','sea','fortress','other')),
+  modern_equivalent TEXT,
+  description       TEXT,
+  source_id         INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS events (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT NOT NULL,
+  description      TEXT,
+  event_type       TEXT DEFAULT 'other' CHECK(event_type IN (
+                     'birth','death','meeting','battle','reign',
+                     'transformation','prophecy','journey','other'
+                   )),
+  parent_event_id  INTEGER REFERENCES events(id),
+  character_id     INTEGER REFERENCES characters(id),
+  cycle            TEXT DEFAULT 'other' CHECK(cycle IN ('mythological','ulster','fenian','kings','other')),
+  approximate_era  TEXT,
+  source_id        INTEGER REFERENCES sources(id),
+  created_at       TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS event_characters (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id     INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  role         TEXT DEFAULT 'other' CHECK(role IN ('protagonist','antagonist','ally','mentioned','victim','other')),
+  notes        TEXT,
+  source_id    INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS event_places (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id  INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  place_id  INTEGER NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  source_id INTEGER REFERENCES sources(id)
+);
+CREATE TABLE IF NOT EXISTS event_relations (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_event_id  INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  to_event_id    INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  relation_type  TEXT NOT NULL DEFAULT 'before' CHECK(relation_type IN (
+                   'before','causes','contains','parallel','meets'
+                 )),
+  confidence     TEXT DEFAULT 'probable' CHECK(confidence IN ('certain','probable','speculative')),
+  reason         TEXT,
+  source_id      INTEGER REFERENCES sources(id)
+);
+`;
+
+for (const stmt of createTables.split(";").map((s) => s.trim()).filter(Boolean)) {
+  sqlite.exec(stmt + ";");
+}
+
+// P1: Approval workflow columns (characters, events, places, groups, family_relations)
+const approvalCols = [
+  "status       TEXT DEFAULT 'approved'",
+  "source_quote TEXT",
+  "proposed_by  TEXT DEFAULT 'human'",
+  "reviewed_at  TEXT",
+  "review_notes TEXT",
+  "confidence   TEXT DEFAULT 'established'",
+];
+const approvalTables = ["characters", "events", "places", "groups", "family_relations"];
+
+for (const table of approvalTables) {
+  for (const col of approvalCols) {
+    try { sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${col};`); } catch { /* already exists */ }
+  }
+}
+
+// P4: Multi-mythology column (characters, events)
+for (const table of ["characters", "events"]) {
+  try { sqlite.exec(`ALTER TABLE ${table} ADD COLUMN mythology TEXT DEFAULT 'celtic-irish';`); } catch { /* already exists */ }
+}
+
+// ── Drizzle ORM connection ─────────────────────────────────────────────────
 export const db = drizzle(sqlite, { schema });
 export { schema };
