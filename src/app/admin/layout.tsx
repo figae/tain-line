@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { auth, signOut } from "@/auth";
+import { redirect } from "next/navigation";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  if (!session) redirect("/api/auth/signin");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* Admin sub-nav */}
@@ -46,6 +51,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {l.label}
           </Link>
         ))}
+
+        {/* User info + logout — pushed to the right */}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {session.user?.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={session.user.image}
+              alt={session.user.name ?? "User"}
+              width={22}
+              height={22}
+              style={{ borderRadius: "50%", border: "1px solid var(--border)" }}
+            />
+          )}
+          <span style={{ fontSize: "0.7rem", color: "var(--slate)", fontFamily: "Cinzel, serif" }}>
+            {session.user?.name ?? session.user?.email}
+          </span>
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/" });
+            }}
+          >
+            <button
+              type="submit"
+              style={{
+                fontFamily: "Cinzel, serif",
+                fontSize: "0.6rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                color: "var(--slate)",
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: 2,
+                padding: "2px 8px",
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+          </form>
+        </div>
       </div>
 
       <div style={{ flex: 1, padding: "2rem 1.5rem", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
