@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- dynamic CJS seed loader run via tsx */
 /**
  * Seed runner — loads and executes seed files from src/db/seeds/.
  *

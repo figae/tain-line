@@ -81,7 +81,7 @@ export async function GET(
 
     const myGen = visited.get(charId)!.generation;
 
-    for (const { otherId, relationType, genDelta } of adj.get(charId) ?? []) {
+    for (const { otherId, genDelta } of adj.get(charId) ?? []) {
       if (visited.has(otherId)) continue;
       if (!charById.has(otherId)) continue;
 

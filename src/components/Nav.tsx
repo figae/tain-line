@@ -2,80 +2,147 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { signOut } from "next-auth/react";
+
+export interface NavUser {
+  name: string;
+  role: "admin" | "editor" | "viewer";
+}
 
 const links = [
-  { href: "/",            label: "Übersicht"    },
-  { href: "/timeline",    label: "Timeline"     },
-  { href: "/characters",  label: "Charaktere"   },
-  { href: "/events",      label: "Events"       },
-  { href: "/sources",     label: "Quellen"      },
-  { href: "/search",      label: "Suche"        },
-  { href: "/admin",       label: "Admin"        },
+  { href: "/",           label: "Übersicht"  },
+  { href: "/timeline",   label: "Timeline"   },
+  { href: "/characters", label: "Charaktere" },
+  { href: "/events",     label: "Events"     },
+  { href: "/artifacts",  label: "Artefakte"  },
+  { href: "/places",     label: "Orte"       },
+  { href: "/sources",    label: "Quellen"    },
+  { href: "/search",     label: "Suche"      },
 ];
 
-export default function Nav() {
+const ROLE_LABEL: Record<NavUser["role"], string> = {
+  admin:  "Admin",
+  editor: "Editor",
+  viewer: "Leser",
+};
+
+export default function Nav({ user }: { user?: NavUser | null }) {
   const path = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header
-      style={{
-        background: "var(--bark)",
-        borderBottom: "1px solid var(--border)",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-      }}
-    >
-      <div
-        className="max-w-7xl mx-auto px-4"
-        style={{ display: "flex", alignItems: "center", gap: "2rem", height: "60px" }}
-      >
+    <header className="site-header">
+      <div className="site-header-inner max-w-7xl mx-auto px-4">
         {/* Logo / wordmark */}
-        <Link
-          href="/"
-          style={{
-            fontFamily: "Cinzel, serif",
-            fontSize: "1.1rem",
-            fontWeight: 700,
-            color: "var(--amber)",
-            letterSpacing: "0.2em",
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <Link href="/" className="wordmark">
           ᚈᚐᚔᚅ · LINE
         </Link>
 
-        <div
-          style={{ height: "24px", width: "1px", background: "var(--border)" }}
-        />
+        <div className="header-divider" />
 
-        <nav style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
+        {/* Desktop nav */}
+        <nav className="main-nav">
           {links.map((l) => {
             const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                style={{
-                  fontFamily: "Cinzel, serif",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  padding: "6px 14px",
-                  borderRadius: "2px",
-                  textDecoration: "none",
-                  color: active ? "var(--stone)" : "var(--mist)",
-                  background: active ? "var(--gold)" : "transparent",
-                  transition: "color 0.15s, background 0.15s",
-                }}
+                className={`nav-link${active ? " nav-link-active" : ""}`}
               >
                 {l.label}
               </Link>
             );
           })}
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className={`nav-link${path.startsWith("/admin") ? " nav-link-active" : ""}`}
+            >
+              Admin
+            </Link>
+          )}
         </nav>
+
+        <div style={{ flex: 1 }} />
+
+        {/* User area */}
+        {user ? (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="user-chip"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              <span className="user-avatar">{user.name.slice(0, 1).toUpperCase()}</span>
+              <span className="user-name">{user.name}</span>
+              <span className={`role-badge role-${user.role}`}>{ROLE_LABEL[user.role]}</span>
+            </button>
+            {menuOpen && (
+              <div className="user-menu" role="menu">
+                <div className="user-menu-info">
+                  Angemeldet als <strong>{user.name}</strong>
+                  <br />
+                  Rolle: {ROLE_LABEL[user.role]}
+                  {user.role === "viewer" && (
+                    <div style={{ marginTop: "0.4rem", color: "var(--slate)", fontSize: "0.72rem" }}>
+                      Nur Lesen — ein Admin kann dir Schreibrechte geben.
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="user-menu-item"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  role="menuitem"
+                >
+                  Abmelden
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link href="/login" className="btn-login">
+            Anmelden
+          </Link>
+        )}
+
+        {/* Mobile hamburger */}
+        <button
+          className="hamburger"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label="Menü öffnen"
+          aria-expanded={mobileOpen}
+        >
+          ☰
+        </button>
       </div>
+
+      {/* Mobile nav drawer */}
+      {mobileOpen && (
+        <nav className="mobile-nav">
+          {links.map((l) => {
+            const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMobileOpen(false)}
+                className={`nav-link${active ? " nav-link-active" : ""}`}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
+          {user?.role === "admin" && (
+            <Link href="/admin" onClick={() => setMobileOpen(false)} className="nav-link">
+              Admin
+            </Link>
+          )}
+        </nav>
+      )}
     </header>
   );
 }

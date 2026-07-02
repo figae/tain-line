@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq, or } from "drizzle-orm";
+import { requireRole, isGuardError } from "@/lib/api-guard";
 
 // GET /api/admin/review — list all pending_review entries across entity types
 export async function GET() {
@@ -48,6 +49,9 @@ export async function GET() {
 // POST /api/admin/review — approve or reject an entity
 // Body: { entityType, id, action: "approve"|"reject", reviewNotes? }
 export async function POST(req: NextRequest) {
+  const session = await requireRole("admin");
+  if (isGuardError(session)) return session;
+
   const body = await req.json();
   const { entityType, id, action, reviewNotes } = body as {
     entityType: "character" | "event" | "place" | "group" | "relation";

@@ -35,11 +35,11 @@ export const seed: Seed["seed"] = (db) => {
     "Provides genealogical context for the Tuatha Dé Danann."
   ).lastInsertRowid as number;
 
-  const grayEdition = insertSource.run(
+  insertSource.run(
     "Cath Maige Tuired: The Second Battle of Mag Tuired",
     "scholarly", "Elizabeth A. Gray", 1982, null,
     "Standard modern edition and translation. Irish Texts Society vol. 52."
-  ).lastInsertRowid as number;
+  );
 
   // ── GROUPS ───────────────────────────────────────────────────────────────
   // Use INSERT OR IGNORE so this seed is safe to run alongside `core`,

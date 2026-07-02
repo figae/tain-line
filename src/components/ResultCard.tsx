@@ -26,7 +26,7 @@ export default function ResultCard({ type, label, meta, quote, description }: Re
         <p style={{ color: "var(--mist)", fontSize: "0.78rem", margin: "0.25rem 0 0.4rem" }}>{description}</p>
       )}
       <blockquote style={{ borderLeft: "2px solid var(--amber)", paddingLeft: "0.75rem", margin: 0, color: "var(--slate)", fontSize: "0.75rem", fontStyle: "italic" }}>
-        „{quote}"
+        &bdquo;{quote}&ldquo;
       </blockquote>
     </div>
   );

@@ -37,7 +37,24 @@ interface CharDetail {
     cycle: string;
     role: string;
   }[];
+  artifacts: {
+    id: number;
+    name: string;
+    type: string;
+    relationship: string;
+    notes: string | null;
+  }[];
 }
+
+const ARTIFACT_REL_LABEL: Record<string, string> = {
+  owner:   "Besitzer·in",
+  wielder: "Träger·in",
+  creator: "Schöpfer·in",
+  keeper:  "Hüter·in",
+  seeker:  "Suchende·r",
+  victim:  "Opfer",
+  other:   "Verbunden",
+};
 
 interface RelationItem {
   charId: number;
@@ -395,7 +412,7 @@ export default function CharacterDetail() {
 
         {char.sourceQuote && (
           <blockquote className="source-quote" style={{ marginTop: "1rem" }}>
-            „{char.sourceQuote}"
+            &bdquo;{char.sourceQuote}&ldquo;
             {char.source && (
               <span className="attribution">
                 — {char.source.url ? (
@@ -489,6 +506,31 @@ export default function CharacterDetail() {
                       </div>
                     ))}
                   </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Artifacts */}
+          {(char.artifacts ?? []).length > 0 && (
+            <>
+              <h2 style={{ fontSize: "0.85rem", margin: "1.5rem 0 0.75rem", color: "var(--amber)", fontFamily: "Cinzel, serif", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                Artefakte
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {char.artifacts.map((a, i) => (
+                  <Link key={i} href="/artifacts" style={{ textDecoration: "none" }}>
+                    <div className="card" style={{ padding: "0.65rem 1rem", display: "flex", gap: "0.6rem", alignItems: "baseline", flexWrap: "wrap" }}>
+                      <span style={{ color: "var(--gold)" }}>◆</span>
+                      <span style={{ color: "var(--cream)", fontSize: "0.95rem" }}>{a.name}</span>
+                      <span style={{ color: "var(--slate)", fontSize: "0.72rem", fontFamily: "Cinzel, serif", letterSpacing: "0.05em" }}>
+                        {ARTIFACT_REL_LABEL[a.relationship] ?? a.relationship}
+                      </span>
+                      {a.notes && (
+                        <span style={{ color: "var(--slate)", fontSize: "0.75rem", fontStyle: "italic" }}>— {a.notes}</span>
+                      )}
+                    </div>
+                  </Link>
                 ))}
               </div>
             </>

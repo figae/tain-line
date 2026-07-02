@@ -4,37 +4,46 @@ Ein **Mythologie-Wissensgraph** zur strukturierten Erfassung, Verwaltung und Dar
 
 ## Zweck
 
-Aus den überlieferten Sagen (Cath Maige Tuired, Táin Bó Cúailnge, Lebor Gabála Érenn u.a.) werden alle extrahierbaren Informationen strukturiert erfasst: Charaktere, Ereignisse, Relationen, Orte, Gruppen — jede Information verknüpft mit Quellenangabe und Originalzitat. Daraus entstehen ein Wissensgraph und eine interaktive Darstellung, die "Pseudo-Schlussfolgerungen" und Zusammenhänge sichtbar macht, die im Fliesstext der Quellen verborgen bleiben.
+Aus den überlieferten Sagen (Cath Maige Tuired, Táin Bó Cúailnge, Lebor Gabála Érenn u.a.) werden alle extrahierbaren Informationen strukturiert erfasst: Charaktere, Ereignisse, Relationen, Orte, Gruppen, Artefakte — jede Information verknüpft mit Quellenangabe und Originalzitat. Daraus entstehen ein Wissensgraph und eine interaktive Darstellung, die Zusammenhänge sichtbar macht, die im Fliesstext der Quellen verborgen bleiben.
 
 Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, etc.).
 
 **Kernprinzip:** Jede Information muss durch einen Menschen geprüft und freigegeben werden, bevor sie in die Datenhaltung einfliesst.
 
-## Features (aktueller Stand)
+## Features
 
-- **Charakterprofile** — mit Eigenschaften, Epitheta, Gruppen- und Quellenzugehörigkeit
-- **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter (ReactFlow)
-- **Timeline-Graph** — chronologischer Ereignisgraph mit Zyklen (Mythologisch / Ulster / Fenian / Könige) und Charakter-Swimlanes
-- **Events** — Schlachten, Krönungen, Reisen, Prophezeiungen u.a. mit Typisierung und Quellenverknüpfung
-- **Seed-Daten** — Basisdatensatz irisch-keltische Mythologie (CMT-Deep, Core)
+- **Timeline mit Zoom** — topologisch geordneter Ereignisgraph über alle vier Zyklen; vier Zoomstufen von „Ären" (nur grosse Wendepunkte) bis „Leben" (inkl. Geburten/Tode), plus Charakter-Fokus
+- **Timeline-Graph** — ReactFlow-Ansicht mit Zyklen-Ebenen und Charakter-Swimlanes
+- **Charakterprofile** — Eigenschaften, Epitheta, Gruppen, Artefakte, Quellenzitate, Vollständigkeits-Indikator
+- **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter (Blutlinie + Nebenlinien)
+- **Artefakte** — legendäre Waffen, Schätze und Wunderdinge mit Besitzern/Trägern (Vier Schätze, Gáe Bulg, Harfe des Dagda …)
+- **Orte** — die mythische Landkarte Irlands inkl. moderner Entsprechungen und verknüpfter Ereignisse
+- **Volltextsuche** — über Charaktere, Events, Orte und Gruppen
+- **Login & Rollen** — Lesen ist öffentlich; Schreiben erfordert ein Konto mit Rechten (siehe unten)
+- **Review-Workflow** — Editor-Vorschläge landen in der Review-Queue und werden erst nach Freigabe sichtbar
+- **KI-Extraktion** — Sagentexte einfügen, Claude schlägt strukturierte Entitäten mit Originalzitaten vor (Admin)
+- **Vollständiger Datensatz** — Seed `mythology` mit allen vier Zyklen: ~130 Charaktere, ~135 Events, ~130 Familienrelationen, 23 Artefakte, 30 Orte, 22 Quellen
 
-## Entwicklungsplan
+## Authentifizierung & Rollen
 
-Siehe [`plan.md`](./plan.md) für die vollständige Roadmap (P0–P6).
+| Rolle | Rechte |
+|---|---|
+| *anonym* | Alles lesen |
+| `viewer` | Alles lesen (wie anonym) — Standardrolle nach Registrierung |
+| `editor` | Daten vorschlagen; Vorschläge landen als `pending_review` in der Queue |
+| `admin` | Review-Queue, Benutzerverwaltung, KI-Extraktion, direkte Schreibrechte |
 
-Kurzübersicht:
-- **P0** — Authentifizierung + Approval-Workflow-Schema
-- **P1** — KI-gestützte Datenerfassung mit Review-Queue
-- **P2** — Datenqualität, Vollständigkeit, Duplikatserkennung
-- **P3** — UI-Verfeinerung, keltisches Theme, Suche
-- **P4** — Weitere Mythologien, Export, Erweiterungen
-- **P5** — Server-Deployment, CI/CD, Betrieb
-- **P6** — UI-Optimierung & Mobile App
+- Registrierung unter `/register`, Login unter `/login` (E-Mail + Passwort, bcrypt-gehasht)
+- **Das erste registrierte Konto wird automatisch Admin** (Bootstrap); alle weiteren starten als `viewer` und werden unter `/admin/users` befördert
+- GitHub OAuth als optionaler zweiter Login-Weg (siehe `env.local.example`)
+- Alle Schreib-Endpunkte sind doppelt geschützt (Middleware + Handler-Guard), Eingaben werden validiert, Security-Header (CSP, X-Frame-Options u.a.) sind gesetzt, Login/Registrierung sind rate-limitiert
 
 ## Lokale Entwicklung
 
 ```bash
 npm install
+cp env.local.example .env.local   # AUTH_SECRET setzen!
+npm run db:reset -- mythology     # DB anlegen + kompletten Mythologie-Datensatz laden
 npm run dev
 ```
 
@@ -43,10 +52,12 @@ App läuft auf [http://localhost:3000](http://localhost:3000).
 ### Datenbank
 
 ```bash
-npm run db:migrate          # Schema-Migrationen ausführen
-npm run db:seed core        # Basisdaten laden
-npm run db:seed cmt-deep    # Cath Maige Tuired Tiefendaten laden
-npm run db:reset core       # DB zurücksetzen und neu befüllen
+npm run db:migrate              # Schema-Migrationen ausführen
+npm run db:seed                 # verfügbare Seeds auflisten
+npm run db:seed -- mythology    # kompletter irisch-keltischer Datensatz (empfohlen)
+npm run db:seed -- core         # kleiner Basisdatensatz
+npm run db:seed -- cmt-deep     # Cath Maige Tuired Tiefendaten
+npm run db:reset -- mythology   # DB zurücksetzen und neu befüllen
 ```
 
 ### Tests
@@ -54,13 +65,19 @@ npm run db:reset core       # DB zurücksetzen und neu befüllen
 ```bash
 npm test                    # Unit Tests (Vitest)
 npm run test:e2e            # End-to-End Tests (Playwright)
+npm run lint                # ESLint
 ```
+
+## Entwicklungsplan
+
+Siehe [`plan.md`](./plan.md) für die vollständige Roadmap (P0–P6).
 
 ## Technologie-Stack
 
 | Bereich | Technologie |
 |---|---|
 | Framework | Next.js 16 (App Router) |
+| Auth | NextAuth v5 (Credentials + optional GitHub), bcryptjs |
 | Datenbank | SQLite via better-sqlite3 |
 | ORM | Drizzle ORM |
 | Graph-Visualisierung | @xyflow/react (ReactFlow) |
@@ -73,3 +90,6 @@ npm run test:e2e            # End-to-End Tests (Playwright)
 - [Cath Maige Tuired](https://celt.ucc.ie/published/T300010/)
 - [Lebor Gabála Érenn](https://celt.ucc.ie/published/T100055/)
 - [Táin Bó Cúailnge](https://celt.ucc.ie/published/T301035/)
+- [Tochmarc Étaíne](https://celt.ucc.ie/published/T300012/)
+- [Togail Bruidne Dá Derga](https://celt.ucc.ie/published/T301017/)
+- Lady Gregory, *Gods and Fighting Men* (1904)

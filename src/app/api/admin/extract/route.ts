@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { db, schema } from "@/db";
+import { requireRole, isGuardError } from "@/lib/api-guard";
 
 const client = new Anthropic();
 
@@ -100,6 +101,9 @@ type ExtractedData = {
 };
 
 export async function POST(req: NextRequest) {
+  const session = await requireRole("admin");
+  if (isGuardError(session)) return session;
+
   const body = await req.json();
   const { text, sourceId } = body as { text: string; sourceId?: number };
 

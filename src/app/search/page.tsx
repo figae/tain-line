@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
@@ -32,20 +32,22 @@ function SearchPageInner() {
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (initialQ) {
-      doSearch(initialQ);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const doSearch = async (q: string) => {
+  const doSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) { setResults(null); return; }
     setLoading(true);
     const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
     const data = await res.json() as SearchResults;
     setResults(data);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (initialQ) {
+      doSearch(initialQ);
+    }
+    // Only on mount — subsequent searches run via the input handler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

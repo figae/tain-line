@@ -70,8 +70,6 @@ const REL_LABEL: Record<string, string> = {
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 
-const NODE_W   = 160;
-const NODE_H   = 70;
 const GEN_GAP  = 220; // vertical gap between generations
 const NODE_GAP = 200; // horizontal gap between nodes in same generation
 
@@ -171,7 +169,6 @@ export default function FamilyTreePage() {
 
   // Fetch family tree data
   useEffect(() => {
-    setLoading(true);
     fetch(`/api/characters/${id}/family-tree`)
       .then((r) => r.json())
       .then((d) => {

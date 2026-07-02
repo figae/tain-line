@@ -43,7 +43,6 @@ function EventsContent() {
   const [typeFilter, setTypeFilter] = useState<string>("");
 
   useEffect(() => {
-    setLoading(true);
     const url = cycle ? `/api/events?cycle=${cycle}` : "/api/events";
     fetch(url)
       .then((r) => r.json())

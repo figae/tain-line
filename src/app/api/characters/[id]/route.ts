@@ -3,6 +3,8 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import type { NewCharacter } from "@/db/schema";
 import { safeParseJson } from "@/lib/json";
+import { auth } from "@/auth";
+import { requireRole, isGuardError } from "@/lib/api-guard";
 
 export async function GET(
   _req: NextRequest,
@@ -23,7 +25,15 @@ export async function GET(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  const [properties, groups, familyFrom, familyTo, events, source] =
+  // Unapproved entries are only visible to admins (review queue)
+  if (character.status !== "approved") {
+    const session = await auth();
+    if (session?.user?.role !== "admin") {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+  }
+
+  const [properties, groups, familyFrom, familyTo, events, source, artifactRows] =
     await Promise.all([
       db
         .select({
@@ -102,6 +112,21 @@ export async function GET(
             .from(schema.sources)
             .where(eq(schema.sources.id, character.sourceId))
         : Promise.resolve([]),
+
+      db
+        .select({
+          id: schema.artifacts.id,
+          name: schema.artifacts.name,
+          type: schema.artifacts.type,
+          relationship: schema.artifactCharacters.relationship,
+          notes: schema.artifactCharacters.notes,
+        })
+        .from(schema.artifactCharacters)
+        .innerJoin(
+          schema.artifacts,
+          eq(schema.artifactCharacters.artifactId, schema.artifacts.id)
+        )
+        .where(eq(schema.artifactCharacters.characterId, charId)),
     ]);
 
   return NextResponse.json({
@@ -112,6 +137,7 @@ export async function GET(
     groups,
     family: { from: familyFrom, to: familyTo },
     events,
+    artifacts: artifactRows,
   });
 }
 
@@ -119,27 +145,44 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await requireRole("editor");
+  if (isGuardError(session)) return session;
+
   const { id } = await params;
   const charId = parseInt(id, 10);
   if (isNaN(charId)) {
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Ungültiger Request-Body." }, { status: 400 });
+  }
   const updates: Partial<NewCharacter> = {};
 
-  if (typeof body.name === "string")        updates.name        = body.name;
-  if (Array.isArray(body.altNames))         updates.altNames    = JSON.stringify(body.altNames);
-  if (typeof body.gender === "string")      updates.gender      = body.gender;
-  if (typeof body.description === "string") updates.description = body.description;
-  if (typeof body.epithet === "string")     updates.epithet     = body.epithet;
+  const GENDERS = ["male", "female", "other", "unknown"] as const;
+  if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim().slice(0, 200);
+  if (Array.isArray(body.altNames))
+    updates.altNames = JSON.stringify(
+      body.altNames.filter((a): a is string => typeof a === "string").slice(0, 20)
+    );
+  if (typeof body.gender === "string" && (GENDERS as readonly string[]).includes(body.gender))
+    updates.gender = body.gender as (typeof GENDERS)[number];
+  if (typeof body.description === "string") updates.description = body.description.slice(0, 5000);
+  if (typeof body.epithet === "string")     updates.epithet     = body.epithet.slice(0, 300);
   if (typeof body.isDeity === "boolean")    updates.isDeity     = body.isDeity;
   if (typeof body.isDead === "boolean")     updates.isDead      = body.isDead;
-  if (typeof body.sourceId === "number")    updates.sourceId    = body.sourceId;
+  if (typeof body.sourceId === "number" && Number.isInteger(body.sourceId)) updates.sourceId = body.sourceId;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "no valid fields" }, { status: 400 });
   }
+
+  // Editor edits go back through the review queue
+  if (session.role !== "admin") updates.status = "pending_review";
+  updates.updatedAt = new Date().toISOString();
 
   const result = await db
     .update(schema.characters)
