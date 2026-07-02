@@ -106,22 +106,61 @@ function buildLayout(
     byGen.get(n.generation)!.push(n);
   }
 
-  const result: FamilyFlowNode[] = [];
+  // Adjacency among visible nodes — used for barycenter ordering so that
+  // relatives end up close to each other and edge crossings shrink.
+  const adj = new Map<number, number[]>();
+  for (const e of apiEdges) {
+    if (!visibleSet.has(e.fromId) || !visibleSet.has(e.toId)) continue;
+    if (!adj.has(e.fromId)) adj.set(e.fromId, []);
+    if (!adj.has(e.toId)) adj.set(e.toId, []);
+    adj.get(e.fromId)!.push(e.toId);
+    adj.get(e.toId)!.push(e.fromId);
+  }
 
-  for (const [gen, nodes] of byGen) {
+  const result: FamilyFlowNode[] = [];
+  const placedX = new Map<number, number>();
+
+  // Process generations outward from the focus (gen 0 first) so each row
+  // can order itself under its already-placed neighbours.
+  const genKeys = Array.from(byGen.keys()).sort(
+    (a, b) => Math.abs(a) - Math.abs(b) || a - b
+  );
+
+  for (const gen of genKeys) {
+    const nodes = byGen.get(gen)!;
     const coreNodes    = nodes.filter((n) => n.role !== "lateral");
     const lateralNodes = nodes.filter((n) => n.role === "lateral");
 
     // Y is negated so that positive-gen ancestors appear above (negative y = top of screen)
     const y = -gen * GEN_GAP;
 
+    // Barycenter: sort core nodes by the mean x of their placed relatives
+    const scored = coreNodes.map((n) => {
+      const neighbourXs = (adj.get(n.id) ?? [])
+        .map((o) => placedX.get(o))
+        .filter((x): x is number => x !== undefined);
+      return {
+        n,
+        hasNeighbours: neighbourXs.length > 0,
+        score: neighbourXs.length > 0
+          ? neighbourXs.reduce((a, b) => a + b, 0) / neighbourXs.length
+          : 0,
+      };
+    });
+    scored.sort((a, b) => {
+      if (a.hasNeighbours !== b.hasNeighbours) return a.hasNeighbours ? -1 : 1;
+      return a.score - b.score || a.n.name.localeCompare(b.n.name);
+    });
+    const orderedCore = scored.map((s) => s.n);
+
     // Lay out core nodes centred horizontally
-    const totalW = (coreNodes.length - 1) * NODE_GAP;
+    const totalW = (orderedCore.length - 1) * NODE_GAP;
     const corePos = new Map<number, number>(); // id → x
 
-    coreNodes.forEach((n, i) => {
+    orderedCore.forEach((n, i) => {
       const x = i * NODE_GAP - totalW / 2;
       corePos.set(n.id, x);
+      placedX.set(n.id, x);
       result.push({
         id:   String(n.id),
         type: "familyNode" as const,
@@ -131,17 +170,20 @@ function buildLayout(
     });
 
     // Place lateral nodes immediately to the right of their bloodline partner,
+    // offset half a row down so partners don't overlap core relatives,
     // or at the end of the row if no partner is found.
-    let lateralOffset = coreNodes.length * NODE_GAP - totalW / 2; // fallback x
-    lateralNodes.forEach((n) => {
+    let lateralOffset = orderedCore.length * NODE_GAP - totalW / 2; // fallback x
+    lateralNodes.forEach((n, li) => {
       const anchorId = partnerOf.get(n.id);
       const anchorX  = anchorId !== undefined ? corePos.get(anchorId) : undefined;
-      const x = anchorX !== undefined ? anchorX + NODE_GAP : lateralOffset;
+      const x = anchorX !== undefined ? anchorX + NODE_GAP * 0.72 : lateralOffset;
       if (anchorX === undefined) lateralOffset += NODE_GAP;
+      const yOffset = anchorX !== undefined ? 64 + (li % 2) * 18 : 0;
+      placedX.set(n.id, x);
       result.push({
         id:   String(n.id),
         type: "familyNode" as const,
-        position: { x, y },
+        position: { x, y: y + yOffset },
         data: { id: n.id, name: n.name, gender: n.gender, isDeity: n.isDeity, generation: n.generation, role: n.role },
       });
     });
@@ -163,13 +205,14 @@ export default function FamilyTreePage() {
   const [focalName, setFocalName] = useState("");
   const [loading, setLoading] = useState(true);
   const [showLateral, setShowLateral] = useState(true);
+  const [depth, setDepth] = useState(4);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FamilyFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Fetch family tree data
+  // Fetch family tree data (re-fetches when the generation depth changes)
   useEffect(() => {
-    fetch(`/api/characters/${id}/family-tree`)
+    fetch(`/api/characters/${id}/family-tree?depth=${depth}`)
       .then((r) => r.json())
       .then((d) => {
         setFocalName(d.focal?.name ?? "");
@@ -177,7 +220,7 @@ export default function FamilyTreePage() {
         setApiEdges(d.edges ?? []);
         setLoading(false);
       });
-  }, [id]);
+  }, [id, depth]);
 
   // Rebuild React Flow nodes + edges whenever data or toggle changes
   const visibleIds = useMemo(() => {
@@ -283,6 +326,20 @@ export default function FamilyTreePage() {
                 {label}
               </span>
             </div>
+          ))}
+        </div>
+
+        {/* Generation depth */}
+        <div className="zoom-control" role="group" aria-label="Generationstiefe">
+          {[2, 3, 4, 5, 6].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDepth(d)}
+              title={`${d} Generationen Blutlinie`}
+              className={`zoom-step${depth === d ? " zoom-step-active" : ""}`}
+            >
+              {d}
+            </button>
           ))}
         </div>
 

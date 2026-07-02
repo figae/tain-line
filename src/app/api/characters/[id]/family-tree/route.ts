@@ -24,16 +24,22 @@ const GEN_DELTA_FROM: Record<string, number> = {
   other:          0,
 };
 
-const BLOODLINE_MAX_DEPTH = 4;
-const LATERAL_MAX_DEPTH   = 2;
+const DEFAULT_BLOODLINE_DEPTH = 4;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const focalId = parseInt(id, 10);
   if (isNaN(focalId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  // ?depth=2..6 controls how many bloodline generations to traverse
+  const depthParam = parseInt(req.nextUrl.searchParams.get("depth") ?? "", 10);
+  const BLOODLINE_MAX_DEPTH = Number.isInteger(depthParam)
+    ? Math.min(6, Math.max(2, depthParam))
+    : DEFAULT_BLOODLINE_DEPTH;
+  const LATERAL_MAX_DEPTH = Math.max(2, BLOODLINE_MAX_DEPTH - 2);
 
   const [allRelations, allChars] = await Promise.all([
     db.select().from(schema.familyRelations),

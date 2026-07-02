@@ -13,16 +13,16 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 ## Features
 
 - **Timeline mit Zoom** — topologisch geordneter Ereignisgraph über alle vier Zyklen; vier Zoomstufen von „Ären" (nur grosse Wendepunkte) bis „Leben" (inkl. Geburten/Tode), plus Charakter-Fokus
-- **Timeline-Graph** — ReactFlow-Ansicht mit Zyklen-Ebenen und Charakter-Swimlanes
+- **Timeline-Graph** — ReactFlow-Ansicht mit Zyklen-Ebenen, Zoomstufen, Charakter-Swimlanes und Fokus-Dimming (Events ohne die gewählten Charaktere treten zurück)
 - **Charakterprofile** — Eigenschaften, Epitheta, Gruppen, Artefakte, Quellenzitate, Vollständigkeits-Indikator
-- **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter (Blutlinie + Nebenlinien)
+- **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter: Blutlinie + Nebenlinien, einstellbare Generationstiefe (2–6), kreuzungsarmes Barycenter-Layout, Klick refokussiert den Baum
 - **Artefakte** — legendäre Waffen, Schätze und Wunderdinge mit Besitzern/Trägern (Vier Schätze, Gáe Bulg, Harfe des Dagda …)
 - **Orte** — die mythische Landkarte Irlands inkl. moderner Entsprechungen und verknüpfter Ereignisse
 - **Volltextsuche** — über Charaktere, Events, Orte und Gruppen
 - **Login & Rollen** — Lesen ist öffentlich; Schreiben erfordert ein Konto mit Rechten (siehe unten)
 - **Review-Workflow** — Editor-Vorschläge landen in der Review-Queue und werden erst nach Freigabe sichtbar
 - **KI-Extraktion** — Sagentexte einfügen, Claude schlägt strukturierte Entitäten mit Originalzitaten vor (Admin)
-- **Vollständiger Datensatz** — Seed `mythology` mit allen vier Zyklen: ~130 Charaktere, ~135 Events, ~130 Familienrelationen, 23 Artefakte, 30 Orte, 22 Quellen
+- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **285 Charaktere, 188 Events, 279 Familienrelationen, 29 Artefakte, 37 Orte, 36 Quellen** — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti)
 
 ## Authentifizierung & Rollen
 
@@ -43,7 +43,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 ```bash
 npm install
 cp env.local.example .env.local   # AUTH_SECRET setzen!
-npm run db:reset -- mythology     # DB anlegen + kompletten Mythologie-Datensatz laden
+npm run db:reset -- mythology mythology-extended   # DB anlegen + kompletten Datensatz laden
 npm run dev
 ```
 
@@ -52,12 +52,11 @@ App läuft auf [http://localhost:3000](http://localhost:3000).
 ### Datenbank
 
 ```bash
-npm run db:migrate              # Schema-Migrationen ausführen
-npm run db:seed                 # verfügbare Seeds auflisten
-npm run db:seed -- mythology    # kompletter irisch-keltischer Datensatz (empfohlen)
-npm run db:seed -- core         # kleiner Basisdatensatz
-npm run db:seed -- cmt-deep     # Cath Maige Tuired Tiefendaten
-npm run db:reset -- mythology   # DB zurücksetzen und neu befüllen
+npm run db:migrate                                 # Schema-Migrationen ausführen
+npm run db:seed                                    # verfügbare Seeds auflisten
+npm run db:reset -- mythology mythology-extended   # kompletter Datensatz (empfohlen)
+npm run db:seed -- core                            # kleiner Basisdatensatz
+npm run db:seed -- cmt-deep                        # Cath Maige Tuired Tiefendaten
 ```
 
 ### Tests
