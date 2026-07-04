@@ -22,7 +22,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 - **Login & Rollen** — Lesen ist öffentlich; Schreiben erfordert ein Konto mit Rechten (siehe unten)
 - **Review-Workflow** — Editor-Vorschläge landen in der Review-Queue und werden erst nach Freigabe sichtbar
 - **KI-Extraktion** — Sagentexte einfügen, Claude schlägt strukturierte Entitäten mit Originalzitaten vor (Admin)
-- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **303 Charaktere, 191 Events, 307 Familienrelationen, 29 Artefakte, 37 Orte, 36 Quellen** — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti)
+- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended` + `mythology-catalog`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **433 Charaktere, 193 Events, 335 Familienrelationen, 29 Artefakte, 37 Orte, 36 Quellen** — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti). Das Lebor Gabála ist vollständig inventarisiert: inklusive der fünfzig Frauen der Cessair, der Häuptlinge der Milesier-Flotte und der Königsrolle (Réim Rígraide) bis Ugaine Mór — reine Namenskatalog-Einträge sind als `speculative` gekennzeichnet (nur namentlich bezeugt)
 
 ## Authentifizierung & Rollen
 
@@ -43,7 +43,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 ```bash
 npm install
 cp env.local.example .env.local   # AUTH_SECRET setzen!
-npm run db:reset -- mythology mythology-extended   # DB anlegen + kompletten Datensatz laden
+npm run db:reset -- mythology mythology-extended mythology-catalog   # kompletter Datensatz
 npm run dev
 ```
 
@@ -54,7 +54,7 @@ App läuft auf [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run db:migrate                                 # Schema-Migrationen ausführen
 npm run db:seed                                    # verfügbare Seeds auflisten
-npm run db:reset -- mythology mythology-extended   # kompletter Datensatz (empfohlen)
+npm run db:reset -- mythology mythology-extended mythology-catalog   # kompletter Datensatz (empfohlen)
 npm run db:seed -- core                            # kleiner Basisdatensatz
 npm run db:seed -- cmt-deep                        # Cath Maige Tuired Tiefendaten
 ```
