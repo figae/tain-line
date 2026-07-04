@@ -317,6 +317,8 @@ export const seed: Seed["seed"] = (db) => {
   famRel(FAM_ULSTER, "TAIN");
   famRel(FAM_FENIAN, "ACS");
   famRel(FAM_KINGS, "TBDD");
+  defineChars(CHARS_FINAL);
+  famRel(FAM_FINAL, "TAIN");
 
   defineArtifacts(ARTIFACTS_EXT);
 
@@ -363,9 +365,13 @@ export const seed: Seed["seed"] = (db) => {
   baseEvent("base_suibhne_death", "Tod des Suibhne");
   baseEvent("base_mucrama", "Schlacht von Mag Mucrama");
   baseEvent("base_conn_reign", "Herrschaft des Conn Cétchathach");
+  baseEvent("base_acallam", "Das Gespräch der Alten");
+  baseEvent("base_boann_well", "Boann und der Brunnen der Weisheit");
 
   defineEvents(EVENTS_EXT);
   eventRels(RELS_EXT, "DSEN");
+  defineEvents(EVENTS_FINAL);
+  eventRels(RELS_FINAL, "DSEN");
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1000,7 +1006,7 @@ const EVENTS_EXT: EventDef[] = [
     chars: [["Cú Chulainn", "protagonist"], ["Etarcomol", "victim"], ["Fergus mac Róich", "other", "Sein Schutzwort wurde missbraucht"]] },
   { k: "calatin_fight", n: "Kampf gegen Calatín und seine Söhne", t: "battle", cy: "ulster", src: "TAIN", parent: "base_tain_defense",
     d: "Achtundzwanzig Hände werfen als eine; Cú Chulainn geht unter — bis der Ulter Fiacha im Heer Connachts die Treue bricht und ihm die Hand freischlägt.",
-    chars: [["Cú Chulainn", "protagonist"], ["Calatín", "victim"]] },
+    chars: [["Cú Chulainn", "protagonist"], ["Calatín", "victim"], ["Fiacha mac Fir Febe", "ally", "Sein Hieb befreit die Schwerthand"]] },
   { k: "cethern_wounds", n: "Cetherns Wundenschau", t: "other", cy: "ulster", src: "TAIN",
     d: "Der Arzt Fíngin liest aus jeder Wunde den Gegner; Cethern wählt: drei Tage Heilung und Kampf statt langer Genesung — und fällt wie ein Sturm ins Heer.",
     chars: [["Cethern mac Fintain", "protagonist"], ["Fíngin Fáthliaig", "ally"]] },
@@ -1205,4 +1211,106 @@ const RELS_EXT: EventRel[] = [
   ["suibhne_eorann", "before", "moling_verses", "probable", ""],
   ["hag_leap", "before", "moling_verses", "probable", ""],
   ["moling_verses", "meets", "base_suibhne_death", "certain", "Der Speer findet ihn an Molings Tür"],
+];
+
+// ── Letzte Ergänzungen: Maines, Banshenchas, Acallam, Schlusssteine ──────
+const CHARS_FINAL: CharDef[] = [
+  // Die sieben Maines — Söhne Medbs und Ailills (Táin)
+  { n: "Maine Athramail", g: "male", e: "Dem Vater gleich", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines, Söhne Medbs und Ailills — »der dem Vater Gleiche«. Medb benannte alle Söhne nach dem Druidenspruch um, ein Maine werde Conchobar töten." },
+  { n: "Maine Máthramail", g: "male", e: "Der Mutter gleich", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der der Mutter Gleiche«." },
+  { n: "Maine Andóe", g: "male", e: "Der Schnelle", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der Schnelle«. Er erschlägt in einer Fassung einen Conchobar — nur den falschen: den gleichnamigen Sohn des Arthur." },
+  { n: "Maine Mórgor", g: "male", e: "Der große Pflichttreue", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der von großer Pflicht«." },
+  { n: "Maine Mílscothach", g: "male", e: "Der Honigzüngige", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der mit den Honigworten«." },
+  { n: "Maine Móepirt", g: "male", e: "Der Unbeschreibliche", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der jenseits der Beschreibung«." },
+  { n: "Maine Taí", g: "male", e: "Der Stille", grp: ["Connachta"], src: "TAIN",
+    d: "Einer der sieben Maines — »der Schweigsame«." },
+  // Kriegsgöttinnen & Flussfrauen
+  { n: "Nemain", alt: ["Neman"], g: "female", deity: true, e: "Die Panik der Schlacht", grp: ["Tuatha Dé Danann"], src: "TAIN",
+    d: "Kriegsgöttin des Schlachtschreckens, Gattin des Néit. Ihr Schrei über dem Heer von Connacht tötet hundert Männer allein durch den Schrecken.",
+    props: [["attribute", "Schlachtschrei", "Hundert Tote durch Schrecken allein"]] },
+  { n: "Sinann", alt: ["Sionann", "Shannon"], g: "female", deity: true, e: "Die Namensgeberin des Shannon", grp: ["Tuatha Dé Danann"], src: "DSEN",
+    d: "Enkelin Lirs. Wie Boann naht sie verbotenerweise dem Brunnen der Weisheit unter den neun Haseln — der Brunnen bricht aus, ertränkt sie und wird zum Fluss Shannon.",
+    props: [["place", "Shannon", "Irlands längster Fluss trägt ihren Namen"]] },
+  { n: "Ecne", g: "male", deity: true, e: "Gott der Weisheit", grp: ["Tuatha Dé Danann"], src: "LGE",
+    d: "Verkörperung von Wissen und Dichterweisheit — Enkel der Danu, gemeinsamer Sohn der drei Söhne Tuirells in der Genealogie des Lebor Gabála." },
+  // Étaín-Linie zur Schließung der Conaire-Genealogie
+  { n: "Étaín Óg", alt: ["Étaín die Jüngere"], g: "female", src: "TBDD",
+    d: "Tochter der wiedergeborenen Étaín und Eochu Airems. Ihre Tochter Mess Búachalla wird ausgesetzt, von Hirten aufgezogen — und Mutter Conaire Mórs: die Anderswelt-Linie der Hochkönige." },
+  // Banshenchas-Frauen
+  { n: "Mór Muman", alt: ["Mór of Munster"], g: "female", deity: true, e: "Die Souveränität Munsters", src: "DSEN",
+    d: "Landesherrin Munsters in Frauengestalt: Im Wahnsinn irrt sie durch Irland, bis sie am Königssitz von Cashel Platz und Würde wiederfindet — wen sie erwählt, der ist König.",
+    props: [["attribute", "Souveränität", "Ihre Ehe macht Könige von Munster"]] },
+  { n: "Mugain ingen Chonchraid", g: "female", e: "Königin von Tara", src: "AIDC",
+    d: "Frau des Diarmait mac Cerbaill. Lange unfruchtbar geschmäht, gebiert sie nach gesegnetem Wasser erst ein Lamm, dann einen Lachs — zuletzt Áed Sláine, Ahnherr von Königen." },
+  // Fianna aus dem Acallam
+  { n: "Diorruing", alt: ["Diorruing mac Dobhair"], g: "male", e: "Der Seher der Fianna", grp: ["Fianna", "Clann Baíscne"], src: "ACS",
+    d: "Fianna-Krieger mit dem Zweiten Gesicht — sieht Unheil, ehe es geschieht, und rät Fionn ab, um Gráinne zu werben.",
+    props: [["skill", "Zweites Gesicht", ""]] },
+  { n: "Mac Lugach", alt: ["Gaine mac Lugach"], g: "male", e: "Der raue Enkel", grp: ["Fianna", "Clann Baíscne"], src: "ACS",
+    d: "Enkel Fionns, anfangs so grob, dass die Fianna ihn verstoßen wollen — Fionns Lehrgedicht an ihn ist der Verhaltenskodex der Fianna: »Sei sanft in der Halle, wild im Gefecht.«" },
+  // Ulster-Schlusssteine
+  { n: "Follomain mac Conchobair", g: "male", e: "Führer der Knabenschar", grp: ["Ulaid"], src: "TAIN", dead: true,
+    d: "Sohn Conchobars, führt die Knabenschar von Emain Macha. Während Cú Chulainn im Heilschlaf liegt, fallen die hundertfünfzig Knaben gegen das Heer — Follomain zuletzt." },
+  { n: "Fiacha mac Fir Febe", g: "male", grp: ["Ulaid", "Connachta"], src: "TAIN",
+    d: "Ulter im Exil Fergus'. Bricht die Zuschauerpflicht, als die 28 Hände Calatíns Cú Chulainn untertauchen — sein Hieb schlägt sie ab: die Treue über dem Exil." },
+  // Königszyklus-Schlussstein
+  { n: "Lóegaire mac Néill", g: "male", e: "Hochkönig bei Patricks Ankunft", grp: ["Uí Néill"], src: "ACS",
+    d: "Sohn Nialls, Hochkönig in Tara, als Patrick das Osterfeuer auf Slane entzündet. Er lässt den Glauben zu, bleibt selbst aber Heide — begraben stehend, den Feinden zugewandt." },
+];
+
+const FAM_FINAL: FamRel[] = [
+  ["Medb", "mother", "Maine Athramail"],
+  ["Medb", "mother", "Maine Máthramail"],
+  ["Medb", "mother", "Maine Andóe"],
+  ["Medb", "mother", "Maine Mórgor"],
+  ["Medb", "mother", "Maine Mílscothach"],
+  ["Medb", "mother", "Maine Móepirt"],
+  ["Medb", "mother", "Maine Taí"],
+  ["Ailill mac Máta", "father", "Maine Athramail"],
+  ["Ailill mac Máta", "father", "Maine Máthramail"],
+  ["Ailill mac Máta", "father", "Maine Andóe"],
+  ["Ailill mac Máta", "father", "Maine Mórgor"],
+  ["Ailill mac Máta", "father", "Maine Mílscothach"],
+  ["Ailill mac Máta", "father", "Maine Móepirt"],
+  ["Ailill mac Máta", "father", "Maine Taí"],
+  ["Maine Athramail", "sibling", "Maine Máthramail"],
+  ["Maine Andóe", "sibling", "Maine Mórgor"],
+  ["Maine Mílscothach", "sibling", "Maine Móepirt"],
+  ["Maine Taí", "sibling", "Maine Athramail"],
+  ["Findabair", "sibling", "Maine Máthramail"],
+  ["Néit", "spouse", "Nemain"],
+  ["Lir", "grandparent", "Sinann", "Tochter seines Sohnes Lodan"],
+  ["Étaín", "mother", "Étaín Óg"],
+  ["Eochu Airem", "father", "Étaín Óg"],
+  ["Étaín Óg", "mother", "Mess Búachalla"],
+  ["Mugain ingen Chonchraid", "spouse", "Diarmait mac Cerbaill"],
+  ["Fionn mac Cumhaill", "grandparent", "Mac Lugach", "Enkel über die Tochter Lugach"],
+  ["Conchobar mac Nessa", "father", "Follomain mac Conchobair"],
+  ["Niall Noígíallach", "father", "Lóegaire mac Néill"],
+];
+
+const EVENTS_FINAL: EventDef[] = [
+  { k: "sinann_well", n: "Sinann und der Brunnen der Weisheit", t: "transformation", cy: "mythological", src: "DSEN",
+    d: "Wie Boann sucht Sinann die Weisheit der neun Haseln — der Brunnen bricht aus, ertränkt sie und strömt als Shannon westwärts: Irlands längster Fluss trägt ihren Namen.",
+    chars: [["Sinann", "victim"]] },
+  { k: "boy_troop_fall", n: "Fall der Knabenschar von Emain", t: "battle", cy: "ulster", src: "TAIN", parent: "base_tain_defense",
+    d: "Während Lugh den zerschundenen Sohn in Heilschlaf singt, ziehen die hundertfünfzig Knaben von Emain gegen das Heer — dreimal ihre Zahl erschlagen sie, dann fallen alle, Follomain zuletzt. Cú Chulainns Erwachen wird zum Sichel-Wagen-Gemetzel.",
+    chars: [["Follomain mac Conchobair", "victim"], ["Cú Chulainn", "other", "Rächt die Knaben im Sichelwagen"], ["Medb", "antagonist"]] },
+  { k: "patrick_tara", n: "Patrick in Tara", t: "meeting", cy: "kings", src: "ACS",
+    d: "Das Osterfeuer auf Slane brennt vor dem Feuer des Königs; die Druiden warnen: Löscht ihr es heute nicht, brennt es ewig. Lóegaire lässt den Glauben zu — das Heidenzeitalter neigt sich.",
+    chars: [["Pádraig", "protagonist"], ["Lóegaire mac Néill", "other"]],
+    places: ["Temair"] },
+];
+
+const RELS_FINAL: EventRel[] = [
+  ["sinann_well", "parallel", "base_boann_well", "speculative", "Die beiden Brunnenfrevel sind Schwestersagen"],
+  ["boy_troop_fall", "before", "base_ferdiad_duel", "certain", "Die Knaben fallen während des Heilschlafs, vor dem letzten Furtkampf"],
+  ["base_niall_reign", "before", "patrick_tara", "certain", "Lóegaire ist Nialls Sohn"],
+  ["patrick_tara", "before", "base_acallam", "certain", "Erst die Ankunft, dann das Gespräch der Alten"],
 ];

@@ -22,7 +22,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 - **Login & Rollen** — Lesen ist öffentlich; Schreiben erfordert ein Konto mit Rechten (siehe unten)
 - **Review-Workflow** — Editor-Vorschläge landen in der Review-Queue und werden erst nach Freigabe sichtbar
 - **KI-Extraktion** — Sagentexte einfügen, Claude schlägt strukturierte Entitäten mit Originalzitaten vor (Admin)
-- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **285 Charaktere, 188 Events, 279 Familienrelationen, 29 Artefakte, 37 Orte, 36 Quellen** — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti)
+- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **303 Charaktere, 191 Events, 307 Familienrelationen, 29 Artefakte, 37 Orte, 36 Quellen** — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti)
 
 ## Authentifizierung & Rollen
 
