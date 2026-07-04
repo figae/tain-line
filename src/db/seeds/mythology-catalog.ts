@@ -19,9 +19,9 @@
  */
 import type { Seed } from "./types";
 
-export const name = "LGE Name Catalog";
+export const name = "Name Catalog (all cycles)";
 export const description =
-  "Complete Lebor Gabála inventory: ~25 substantive figures plus the name catalogs (fifty women of Cessair, Milesian chieftains, Roll of Kings). Requires 'mythology' + 'mythology-extended'.";
+  "Complete name inventory across all cycles: LGE catalogs (fifty women, chieftains, Roll of Kings), the Da Derga and Táin musters, the Fianna rolls and the Roll of Kings from Ugaine to Conn. Requires 'mythology' + 'mythology-extended'.";
 
 export const seed: Seed["seed"] = (db) => {
   const selSource = db.prepare(`SELECT id FROM sources WHERE title = ?`);
@@ -378,4 +378,229 @@ export const seed: Seed["seed"] = (db) => {
   R(baseEvent("Bruderkrieg: Éber gegen Éremón"), "before", evEmain, "speculative", "Die Königsrolle liegt zwischen Landnahme und Ulster-Zyklus");
   R(evEmain, "before", baseEvent("Conchobar wird König von Ulster"), "certain", "Emain Macha besteht vor Conchobars Königtum");
   R(evEmain, "before", baseEvent("Machas Fluch über Ulster"), "certain", "Der Ort trägt bereits Machas Namen");
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 4. Die Musterung aus Togail Bruidne Dá Derga
+  // ═════════════════════════════════════════════════════════════════════
+
+  const daDerga: Def[] = [
+    { n: "Lomna Drúth", g: "male", e: "Der Narr der Räuber", dead: true,
+      d: "Sohn des Donn Désa, Narr unter den Räubern. Warnt als Einziger vor dem Überfall — und fällt als Erster: Sein Haupt wird dreimal in die Halle geworfen und dreimal hinaus." },
+    { n: "Fer Le", g: "male", dead: true,
+      d: "Sohn des Donn Désa, Ziehbruder Conaire Mórs — einer der drei, deren Räuberei der König nicht richten wollte und die ihn dafür richteten." },
+    { n: "Fer Gar", g: "male", dead: true,
+      d: "Sohn des Donn Désa, Ziehbruder Conaire Mórs, Räuber von Da Dergas Halle." },
+    { n: "Le Fri Flaith", g: "male", dead: true,
+      d: "Kleiner Sohn Conaire Mórs, auf drei Kissen in der Halle — sein Tod ist die bitterste Klage der Musterung." },
+    { n: "Tulchinne", g: "male", e: "Der Gaukler des Königs",
+      d: "Jongleur Conaires in Da Dergas Halle: neun Schwerter, neun Silberschilde, neun Goldäpfel zugleich in der Luft — als die Geasa brechen, fallen sie ihm zu Boden." },
+    { n: "Die drei Roten", alt: ["Na trí Deirg"], g: "other", deity: true, grp: ["Aes Sídhe"],
+      d: "Drei rote Reiter auf roten Pferden aus dem Síd — Conaire folgt ihnen wider seine Geis zur Halle: »Wir reiten die Pferde des Todes.«" },
+  ];
+  for (const c of daDerga) upsert(c);
+  rel("Donn Désa", "father", "Lomna Drúth");
+  rel("Donn Désa", "father", "Fer Le");
+  rel("Donn Désa", "father", "Fer Gar");
+  rel("Fer Rogain", "sibling", "Fer Le");
+  rel("Fer Rogain", "sibling", "Fer Gar");
+  rel("Lomna Drúth", "sibling", "Fer Rogain");
+  rel("Conaire Mór", "father", "Le Fri Flaith");
+
+  const evDaDerga = baseEvent("Zerstörung von Dá Dergas Halle");
+  insEC.run(evDaDerga, charId("Lomna Drúth"), "victim", "Sein Haupt ward dreimal hineingeworfen", LGE);
+  insEC.run(evDaDerga, charId("Le Fri Flaith"), "victim", null, LGE);
+  insEC.run(evDaDerga, charId("Tulchinne"), "other", "Die Goldäpfel fielen, als das Unheil kam", LGE);
+  insEC.run(evDaDerga, charId("Die drei Roten"), "mentioned", "Das Omen vor der Halle", LGE);
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 5. Die Heerschau der Táin (Ulster-Musterung)
+  // ═════════════════════════════════════════════════════════════════════
+
+  const tainMuster: Def[] = [
+    { n: "Rochad mac Faithemain", g: "male", grp: ["Ulaid"],
+      d: "Junger Ulter Held, den Findabair heimlich liebte — Medb bot ihn der Tochter zur Nacht, um ihn vom Heer fernzuhalten: »Rochads blutlose Schlacht«." },
+    { n: "Íliach", g: "male", e: "Der nackte Alte im Klappernden Wagen", grp: ["Ulaid"], dead: true,
+      d: "Greis der Ulter: Zieht nackt im zerfallenden Wagen mit Steinen und Brocken ins Heer Connachts und zermalmt es, bis man ihm auf eigene Bitte das Haupt nimmt — »Íliachs Mahlwerk«." },
+    { n: "Fintan mac Néill", g: "male", grp: ["Ulaid"],
+      d: "Vater des Cethern. Sein »Zahnkampf« — dreimal fünfzig Männer, Rücken an Rücken durchgebissen — gehört zu den grimmigsten Stücken der Heerschau." },
+    { n: "Lugaid mac Nóis", g: "male", grp: ["Ulaid"],
+      d: "König von Munster im Exil, Jugendfreund Cú Chulainns; warb einst um Emer, trat aber zurück, als er die Liebe des Freundes erkannte." },
+    { n: "Lendabair", g: "female", grp: ["Ulaid"],
+      d: "Tochter Eogans, Frau Conall Cernachs — im Frauenstreit von Bricrius Fest die zweite der drei, die um den Vortritt wetteiferten." },
+    { n: "Eithne Ingubai", g: "female", grp: ["Ulaid"],
+      d: "Frau (oder Geliebte) Cú Chulainns in der älteren Fassung des Serglige — die spätere Überlieferung setzt Emer an ihre Stelle." },
+    { n: "Muinremur mac Gerrcind", g: "male", grp: ["Ulaid"], conf: "speculative",
+      d: "Ulter Held der Heerschau der Táin — »Dicknacken«; über Name und Musterung hinaus ist wenig überliefert." },
+    { n: "Errge Echbél", g: "male", grp: ["Ulaid"], conf: "speculative",
+      d: "»Pferdemaul« — Ulter Held der Heerschau; nur namentlich mit Beinamen bezeugt." },
+    { n: "Mend mac Sálchada", g: "male", grp: ["Ulaid"], conf: "speculative",
+      d: "Ulter Held der Heerschau der Táin; nur namentlich bezeugt." },
+  ];
+  for (const c of tainMuster) upsert(c);
+  rel("Fintan mac Néill", "father", "Cethern mac Fintain");
+  rel("Lendabair", "spouse", "Conall Cernach");
+  rel("Rochad mac Faithemain", "lover", "Findabair");
+  rel("Eithne Ingubai", "lover", "Cú Chulainn", "In der älteren Serglige-Fassung seine Frau");
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 6. Die Fianna-Rollen (Acallam, Bruidhean-Erzählungen, Fionntrá)
+  // ═════════════════════════════════════════════════════════════════════
+
+  const fiannaRoll: Def[] = [
+    { n: "Faolán mac Fionn", g: "male", grp: ["Fianna", "Clann Baíscne"],
+      d: "Sohn Fionns, treuer Kämpe der Fianna — hält in der Nacht des Rowan-Hauses mit Diarmuid die Furt." },
+    { n: "Raighne Roisclethan", g: "male", grp: ["Fianna", "Clann Baíscne"], conf: "speculative",
+      d: "»Weitauge«, Sohn Fionns in den Fianna-Rollen des Acallam; über Name und Zugehörigkeit hinaus wenig überliefert." },
+    { n: "Art Óg mac Morna", g: "male", grp: ["Fianna", "Clann Morna"], conf: "speculative",
+      d: "Krieger der Clann Morna in den Fianna-Rollen; namentlich bezeugt." },
+    { n: "Garraidh mac Morna", g: "male", grp: ["Fianna", "Clann Morna"],
+      d: "Alter Kämpe der Clann Morna — sein Streich mit den ans Haus genagelten Haarzöpfen der Frauen von Almu gehört zu den derbsten Fianna-Schwänken." },
+    { n: "Aidín", alt: ["Aideen"], g: "female", dead: true,
+      d: "Frau Oscars. Stirbt aus Gram über seinen Fall bei Gabhair — Oisín begräbt sie am Binn Éadair (Howth); der Dolmen dort gilt als ihr Grab." },
+    { n: "Colga", alt: ["Colga mac Teine Bhrisgthe"], g: "male", e: "König von Lochlann", dead: true,
+      d: "König von Lochlann, fällt bei seiner Invasion Irlands gegen die Fianna — sein jüngster Sohn Miodhach wird geschont und aufgezogen: die Saat des Rowan-Hauses." },
+    { n: "Miodhach mac Colgáin", alt: ["Midac"], g: "male", e: "Der Verräter des Rowan-Hauses", dead: true,
+      d: "Als Kind geschont, als Mann der Rächer: Vierzehn Jahre plant er, lädt die Fianna ins verzauberte Haus der Vogelbeere und ruft die Heere der Welt — Diarmuid nimmt ihm das Haupt." },
+    { n: "Sinsear na gCath", alt: ["Sinsear of the Battles"], g: "male", e: "König der Welt", dead: true,
+      d: "Weltenkönig, den Miodhach ins Land ruft — vor dem Rowan-Haus fällt er mit seinen Heeren an der Furt." },
+    { n: "Borba", alt: ["Borba der Hochmütige"], g: "male", dead: true,
+      d: "Sohn des Sinsear na gCath — fällt an der Furt des Rowan-Hauses gegen die Getreuen Fionns." },
+    { n: "Bolcán", alt: ["Bolcán König von Frankreich"], g: "male", e: "König von Frankreich",
+      d: "König der Franken in der Schlacht von Fionntrá — flieht wahnsinnig aus dem Gemetzel: Der Sage nach irrte er fortan als Geilt durch die Täler." },
+  ];
+  for (const c of fiannaRoll) upsert(c);
+  rel("Fionn mac Cumhaill", "father", "Faolán mac Fionn");
+  rel("Fionn mac Cumhaill", "father", "Raighne Roisclethan");
+  rel("Goll mac Morna", "sibling", "Art Óg mac Morna");
+  rel("Goll mac Morna", "sibling", "Garraidh mac Morna");
+  rel("Oscar", "spouse", "Aidín");
+  rel("Colga", "father", "Miodhach mac Colgáin");
+  rel("Sinsear na gCath", "father", "Borba");
+
+  const evRowan = baseEvent("Das Haus der Vogelbeere");
+  insEC.run(evRowan, charId("Miodhach mac Colgáin"), "antagonist", "Der Gastgeber der Falle", LGE);
+  insEC.run(evRowan, charId("Sinsear na gCath"), "antagonist", "Der gerufene Weltenkönig", LGE);
+  insEC.run(evRowan, charId("Borba"), "victim", "Fiel an der Furt", LGE);
+  insEC.run(evRowan, charId("Faolán mac Fionn"), "ally", null, LGE);
+  const evVentry = baseEvent("Schlacht von Fionntrá");
+  insEC.run(evVentry, charId("Bolcán"), "victim", "Floh wahnsinnig aus der Schlacht", LGE);
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 7. Königsrolle II: von Ugaine Mór bis Conn Cétchathach
+  // ═════════════════════════════════════════════════════════════════════
+
+  const KINGS2: [string, string, ("established" | "speculative")?][] = [
+    ["Meilge Molbthach", "Sohn Cobthachs — »der Löbliche«; unter seinem Grab brach Loch Melge hervor."],
+    ["Mug Corb", "König der Rolle."],
+    ["Óengus Ollam", "König der Rolle."],
+    ["Irereo", "König der Rolle, von Fer Corb gefällt."],
+    ["Fer Corb", "König der Rolle."],
+    ["Connla Cáem", "»Der Anmutige«, König der Rolle."],
+    ["Ailill Caisfiaclach", "»Der mit den gekrümmten Zähnen«, König der Rolle."],
+    ["Eochaid Ailtlethan", "König der Rolle."],
+    ["Fergus Fortamail", "»Der Übermächtige«, König der Rolle."],
+    ["Óengus Tuirmech Temrach", "»Der Beschämte von Tara« — Vater des Fíacha Fer Mara, den er ausgesetzt aufs Meer gab."],
+    ["Conall Collamrach", "König der Rolle."],
+    ["Nia Segamain", "In seiner Herrschaft ließen sich die Hirschkühe melken wie Hauskühe — Gabe seiner Mutter, der Göttin Flidais.", "established"],
+    ["Énna Aignech", "»Der Gastfreie«, König der Rolle."],
+    ["Crimthann Coscrach", "»Der Siegreiche«, König der Rolle."],
+    ["Finnat Már", "König der Rolle."],
+    ["Bresal Bó-Díbad", "In seiner Zeit raffte die große Rinderpest fast alles Vieh Irlands dahin — bis auf einen Stier und eine Färse in Gleann Samhaisce.", "established"],
+    ["Lugaid Luaigne", "König der Rolle."],
+    ["Congal Cláiringnech", "»Der Flachnägelige«, König der Rolle."],
+    ["Dui Dallta Dedad", "»Der von Deda Geblendete«, König der Rolle."],
+    ["Nuadu Necht", "Kurzkönig aus Leinster vor Conaire Mór."],
+    ["Conchobar Abratruad", "»Der Rotbrauige« — Namensvetter des Ulster-Königs in der Rolle von Tara."],
+    ["Crimthann Nia Náir", "Fuhr mit der Anderswelt-Frau Nár auf große Fahrt und kehrte mit Wunderschätzen heim — an denen er starb.", "established"],
+    ["Fíatach Finn", "König der Rolle, Ahnherr der Dál Fiatach."],
+    ["Fíachu Finnolach", "König der Rolle, Vater Túathal Techtmars, von den Untertanenvölkern erschlagen."],
+    ["Elim mac Conrach", "Usurpator der Untertanenvölker — unter ihm verweigerte das Land Korn und Milch, bis Túathal zurückkehrte."],
+    ["Mal mac Rochride", "König der Rolle, Töter Túathals."],
+  ];
+  for (const [n, note, conf] of KINGS2) {
+    upsert({
+      n, g: "male", dead: true, conf: (conf ?? "speculative"),
+      d: note + " Eintrag der Königsrolle (Réim Rígraide) zwischen Ugaine Mór und Conn Cétchathach.",
+    });
+  }
+  rel("Cobthach Cóel Breg", "father", "Meilge Molbthach");
+  rel("Flidais", "mother", "Nia Segamain", "Die Gabe der gemolkenen Hirschkühe");
+
+  // Substantive kings and their circle
+  const kingsCircle: Def[] = [
+    { n: "Fachtna Fáthach", g: "male", e: "Der Weise", grp: ["Ulaid"], dead: true,
+      d: "König von Ulster und Tara, Gemahl der Ness — in der jüngeren Überlieferung Conchobars leiblicher Vater, wo die ältere Cathbad nennt." },
+    { n: "Rudraige mac Sithrigi", g: "male", e: "Ahnherr der Clanna Rudraige", dead: true,
+      d: "König der Rolle, von dem die großen Ulter Geschlechter — Fergus mac Róich, Conall Cernach, die Clanna Rudraige — ihre Abkunft zählen." },
+    { n: "Feradach Finnfechtnach", g: "male", e: "Der Wahrhaft-Gesegnete", dead: true,
+      d: "König von Tara, in dessen Zeit der Richter Morann urteilte — Wahrheit und Fülle kennzeichnen seine Herrschaft in der Rolle." },
+    { n: "Morann", alt: ["Morann mac Máin"], g: "male", e: "Der Richter mit dem Halsreif",
+      d: "Der große Richter der Königszeit: Sein Halsreif, das Id Morainn, zog sich um den Hals des Lügners zusammen und weitete sich beim wahren Urteil — Verfasser der ältesten Fürstenlehre Irlands." },
+    { n: "Túathal Techtmar", g: "male", e: "Der Rechtmäßige", grp: ["Uí Néill"], dead: true,
+      d: "Kehrt aus dem Exil zurück, bricht den Aufstand der Untertanenvölker und schneidet aus den vier Provinzen das Königsland Mide. Der Betrug an seinen Töchtern Fithir und Dáirine bringt Leinster die Bórama — den Kuhtribut, um den Jahrhunderte gekämpft wird." },
+    { n: "Fithir", g: "female", dead: true,
+      d: "Tochter Túathal Techtmars, dem Leinster-König Eochaid Ainchenn vermählt — stirbt vor Scham, als der Betrug an ihrer Schwester offenbar wird." },
+    { n: "Dáirine", g: "female", dead: true,
+      d: "Tochter Túathal Techtmars. Eochaid erschlich sie mit der Lüge, Fithir sei tot — beim Wiedersehen der Schwestern stirbt Fithir vor Scham, Dáirine vor Gram." },
+    { n: "Eochaid Ainchenn", g: "male", e: "König von Leinster",
+      d: "Betrog Túathal um beide Töchter — sein Betrug kostet Leinster die Bórama, den Kuhtribut an Tara." },
+    { n: "Fedlimid Rechtmar", g: "male", e: "Der Gesetzgeber", grp: ["Uí Néill"], dead: true,
+      d: "Sohn Túathals, Vater Conn Cétchathachs — führte das Vergeltungsrecht »Auge um Auge« ein, und Irland war friedlich in seiner Zeit." },
+    { n: "Cathair Mór", g: "male", e: "König von Leinster und Tara", dead: true,
+      d: "Letzter Leinster-König von Tara vor Conn. Sein »Testament« verteilt Schätze an die Sippen Leinsters — von ihm stammen ihre Königslinien." },
+    { n: "Nath Í", alt: ["Dathí"], g: "male", e: "Der letzte Heidenkönig", grp: ["Uí Néill"], dead: true,
+      d: "Neffe und Nachfolger Nialls, letzter heidnischer Hochkönig — vom Blitz erschlagen am Fuß der Alpen auf großer Heerfahrt; sein Leichnam ward heimgetragen und in Cruachan begraben." },
+  ];
+  for (const c of kingsCircle) upsert(c);
+  rel("Fachtna Fáthach", "spouse", "Ness");
+  rel("Fachtna Fáthach", "father", "Conchobar mac Nessa", "In der jüngeren Fassung; die ältere nennt Cathbad");
+  rel("Rudraige mac Sithrigi", "other", "Fergus mac Róich", "Ahnherr der Clanna Rudraige");
+  rel("Fíachu Finnolach", "father", "Túathal Techtmar");
+  rel("Túathal Techtmar", "father", "Fithir");
+  rel("Túathal Techtmar", "father", "Dáirine");
+  rel("Fithir", "sibling", "Dáirine");
+  rel("Eochaid Ainchenn", "spouse", "Fithir");
+  rel("Eochaid Ainchenn", "spouse", "Dáirine", "Erschlichen mit der Lüge vom Tod der Schwester");
+  rel("Túathal Techtmar", "father", "Fedlimid Rechtmar");
+  rel("Fedlimid Rechtmar", "father", "Conn Cétchathach");
+  rel("Niall Noígíallach", "uncle", "Nath Í");
+
+  // Artifact: the Collar of Morann
+  const insArtifact2 = db.prepare(
+    "INSERT INTO artifacts (name, alt_names, type, description, powers, source_id) VALUES (?,?,?,?,?,?)"
+  );
+  const selArtifact2 = db.prepare("SELECT id FROM artifacts WHERE name = ?");
+  const insAC2 = db.prepare(
+    "INSERT INTO artifact_characters (artifact_id, character_id, relationship, notes, source_id) VALUES (?,?,?,?,?)"
+  );
+  if (!selArtifact2.get("Id Morainn")) {
+    const aid = insArtifact2.run(
+      "Id Morainn",
+      JSON.stringify(["Collar of Morann", "Halsreif des Morann"]),
+      "jewel",
+      "Der Richter-Halsreif des Morann.",
+      "Zieht sich um den Hals des ungerechten Richters zusammen und weitet sich, wenn die Wahrheit gesprochen wird.",
+      LGE
+    ).lastInsertRowid as number;
+    insAC2.run(aid, charId("Morann"), "owner", null, LGE);
+  }
+
+  // Events
+  const evBorama = addEvent({
+    n: "Der Ursprung der Bórama",
+    d: "Eochaid Ainchenn erschleicht sich beide Töchter Túathals mit der Lüge vom Tod der ersten; beim Wiedersehen sterben Fithir vor Scham und Dáirine vor Gram. Túathal legt Leinster die Bórama auf — den Kuhtribut, um den Jahrhunderte gestritten wird.",
+    t: "other", cy: "kings",
+    chars: [["Túathal Techtmar", "protagonist"], ["Fithir", "victim"], ["Dáirine", "victim"], ["Eochaid Ainchenn", "antagonist"]],
+  });
+  R(evEmain, "before", evBorama, "probable", "Túathal steht spät in der Rolle");
+  R(evBorama, "before", baseEvent("Herrschaft des Conn Cétchathach"), "certain", "Túathal ist Conns Großvater");
+
+  const evNathi = addEvent({
+    n: "Tod des Nath Í am Fuß der Alpen",
+    d: "Auf großer Heerfahrt bis an die Alpen erschlägt der Blitz den letzten Heidenkönig — sein Leichnam wird heimgetragen und im roten Hügel von Cruachan begraben.",
+    t: "death", cy: "kings", lifecycleOf: "Nath Í",
+    chars: [["Nath Í", "victim"]],
+  });
+  R(baseEvent("Herrschaft des Niall Noígíallach"), "before", evNathi, "certain", "Nath Í folgt Niall");
+  R(evNathi, "before", baseEvent("Patrick in Tara"), "certain", "Lóegaire folgt Nath Í");
 };
