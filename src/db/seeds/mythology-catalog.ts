@@ -603,4 +603,77 @@ export const seed: Seed["seed"] = (db) => {
   });
   R(baseEvent("Herrschaft des Niall Noígíallach"), "before", evNathi, "certain", "Nath Í folgt Niall");
   R(evNathi, "before", baseEvent("Patrick in Tara"), "certain", "Lóegaire folgt Nath Í");
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 8. Die großen Tode des Ulster-Zyklus — Anker für die automatische
+  //    Constraint-Ableitung (birth < Beteiligung < death)
+  // ═════════════════════════════════════════════════════════════════════
+
+  const ulsterDeaths: Def[] = [
+    { n: "Cet mac Mágach", g: "male", e: "Der Kampfprahler Connachts", grp: ["Connachta"], dead: true,
+      d: "Connachts schärfster Kämpe und Zunge: Beim Schwein des Mac Dathó räumt er Ulsters Helden Wort für Wort vom Bratenmesser, bis Conall Cernach eintritt. Er schleudert den Hirnball des Mesgegra, der Conchobar sieben Jahre im Schädel sitzt — Conalls mütterlicher Oheim und Todfeind zugleich." },
+    { n: "Mesgegra", g: "male", e: "König von Leinster", dead: true,
+      d: "König von Leinster, von Conall Cernach im Zweikampf erschlagen. Sein mit Kalk gekneteter Hirnball wird Ulsters Trophäe — und in Cets Schleuder Conchobars Verhängnis." },
+  ];
+  for (const c of ulsterDeaths) upsert(c);
+  rel("Cet mac Mágach", "sibling", "Finnchóem", "Nach der Überlieferung, die Conall zu Cets Schwestersohn macht");
+  rel("Cet mac Mágach", "uncle", "Conall Cernach");
+
+  if (!selArtifact2.get("Hirnball des Mesgegra")) {
+    const ball = insArtifact2.run(
+      "Hirnball des Mesgegra",
+      JSON.stringify(["Brain of Mesgegra", "Mesgegras Hirn"]),
+      "other",
+      "Das mit Kalk geknetete Hirn des Leinster-Königs Mesgegra — Ulsters Siegestrophäe.",
+      "Aus Cets Schleuder trifft er Conchobar in den Schädel; keine Kunst kann ihn entfernen, und im Zorn des Königs birst er nach sieben Jahren.",
+      LGE
+    ).lastInsertRowid as number;
+    insAC2.run(ball, charId("Conall Cernach"), "creator", "Knetete das Hirn mit Kalk", LGE);
+    insAC2.run(ball, charId("Cet mac Mágach"), "wielder", "Stahl und schleuderte ihn", LGE);
+  }
+
+  const evMesgegra = addEvent({
+    n: "Tod des Mesgegra",
+    d: "Conall Cernach stellt den Leinster-König an der Furt und erschlägt ihn im Zweikampf — das Hirn wird mit Kalk zur Trophäe geknetet.",
+    t: "death", cy: "ulster", lifecycleOf: "Mesgegra",
+    chars: [["Conall Cernach", "protagonist"], ["Mesgegra", "victim"]],
+  });
+  const evConchobarDeath = addEvent({
+    n: "Tod des Conchobar mac Nessa",
+    d: "Cet schleudert den Hirnball des Mesgegra in Conchobars Schädel. Sieben Jahre lebt der König in Schonung — bis der Zorn ihn packt und der Ball birst; die Erzähler legten seinen Tod auf den Tag der Kreuzigung.",
+    t: "death", cy: "ulster", lifecycleOf: "Conchobar mac Nessa",
+    chars: [["Conchobar mac Nessa", "victim"], ["Cet mac Mágach", "antagonist"], ["Mesgegra", "mentioned", "Sein Hirnball ist die Waffe"]],
+  });
+  const evFergusDeath = addEvent({
+    n: "Tod des Fergus mac Róich",
+    d: "Beim Schwimmen mit Medb im See von Cruachan trifft Fergus der Speer — geworfen vom blinden Dichter Lugaid, gelenkt von Ailills Eifersucht.",
+    t: "death", cy: "ulster", lifecycleOf: "Fergus mac Róich",
+    chars: [["Fergus mac Róich", "victim"], ["Ailill mac Máta", "antagonist", "Sein Wort lenkte den blinden Wurf"], ["Medb", "other"]],
+  });
+  const evAilillDeath = addEvent({
+    n: "Tod des Ailill mac Máta",
+    d: "Conall Cernach, zu Gast in Cruachan, erschlägt Ailill an Medbs Geheiß — die Rache für Fergus vollzieht sich im Haus des Täters.",
+    t: "death", cy: "ulster", lifecycleOf: "Ailill mac Máta",
+    chars: [["Ailill mac Máta", "victim"], ["Conall Cernach", "protagonist"], ["Medb", "other", "Ihr Geheiß"]],
+  });
+  const evMedbDeath = addEvent({
+    n: "Tod der Medb",
+    d: "Im Alter badet Medb auf Inis Clothrann im See — Furbaide, Sohn der von ihr getöteten Schwester Clothru, hat den Abstand mit der Schnur gemessen: Der Käse aus seiner Schleuder trifft die Stirn der Königin.",
+    t: "death", cy: "ulster", lifecycleOf: "Medb",
+    chars: [["Medb", "victim"], ["Furbaide Ferbend", "protagonist", "Die Rache für Clothru"]],
+  });
+  const evGollDeath = addEvent({
+    n: "Tod des Goll mac Morna",
+    d: "In der letzten Fehde mit Clann Baíscne auf eine Meeresklippe gedrängt, verhungert Goll dreißig Tage im Angesicht der Belagerer — sein Weib weist er heim: »Geh, Weib, zu deiner Sippe — schön warst du bei mir.«",
+    t: "death", cy: "fenian", lifecycleOf: "Goll mac Morna",
+    chars: [["Goll mac Morna", "victim"], ["Fionn mac Cumhaill", "antagonist", "Der alte Groll um Cnucha"]],
+  });
+
+  // Explicit ordering only where derivation cannot know it
+  R(evMesgegra, "before", evConchobarDeath, "certain", "Der Hirnball existiert vor dem Wurf");
+  R(baseEvent("Schlacht von Gáirech"), "before", evFergusDeath, "certain", "Fergus stirbt nach der Táin");
+  R(evFergusDeath, "causes", evAilillDeath, "certain", "Die Rache für Fergus");
+  R(evAilillDeath, "before", evMedbDeath, "certain", "Medb überlebt Ailill auf Inis Clothrann");
+  R(evConchobarDeath, "before", evMedbDeath, "probable", "Die Erzähler lassen Medb die Helden überdauern");
+  R(evGollDeath, "before", baseEvent("Schlacht von Gabhair"), "probable", "Die Morna-Fehde liegt vor dem Untergang der Fianna");
 };

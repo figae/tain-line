@@ -35,6 +35,7 @@ interface Relation {
   toEventId: number;
   relationType: string;
   confidence: string;
+  derived?: boolean;
 }
 
 interface Character {
@@ -284,10 +285,20 @@ export default function TimelineGraphPage() {
       focusable:  false,
     }));
 
-    // Main timeline edges
+    // Main timeline edges — derived constraints render as thin dashed
+    // sage lines so the machine-inferred ordering is distinguishable
+    // from what the tales state explicitly.
     const mainEdges: Edge[] = allRelations
       .filter((r) => mainIds.has(r.fromEventId) && mainIds.has(r.toEventId))
       .map((r) => {
+        if (r.derived) {
+          return {
+            id:     `d-${r.fromEventId}-${r.toEventId}`,
+            source: String(r.fromEventId),
+            target: String(r.toEventId),
+            style:  { stroke: "#6b8a55", strokeWidth: 1, strokeDasharray: "2 6", opacity: 0.45 },
+          };
+        }
         const style      = REL_EDGE_STYLE[r.relationType] ?? REL_EDGE_STYLE.before;
         const speculative = r.confidence === "speculative";
         return {
@@ -538,6 +549,15 @@ export default function TimelineGraphPage() {
               </span>
             </div>
           ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <div style={{ width: 24, borderTop: "2px dashed #6b8a55", opacity: 0.6 }} />
+            <span style={{
+              fontSize: "0.65rem", color: "var(--sage)",
+              fontFamily: "Cinzel, serif", letterSpacing: "0.08em",
+            }}>
+              ⚙ abgeleitet
+            </span>
+          </div>
           <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1rem", display: "flex", gap: "0.75rem" }}>
             {cycleOrder.map((c) => (
               <div key={c} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
