@@ -3,6 +3,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { topologicalSort } from "@/lib/topological-sort";
 import { deriveConstraints } from "@/lib/derive-constraints";
+import { checkConsistency } from "@/lib/consistency";
 
 const CYCLE_ORDER: Record<string, number> = {
   mythological: 0,
@@ -58,8 +59,21 @@ export async function GET() {
       (CYCLE_ORDER[b.cycle ?? "other"] ?? 4)
   );
 
-  const allOrdering = [...relations, ...derived];
-  const topoOrder = topologicalSort(sorted.map((e) => e.id), allOrdering);
+  // Consistency check: contradictions between explicit and derived
+  // edges form cycles. Explicit wins — conflicted derived edges are
+  // dropped from the ordering; the conflicts surface in /admin/consistency.
+  const consistency = checkConsistency(
+    events.map((e) => e.id),
+    relations.map((r) => ({
+      fromEventId: r.fromEventId,
+      toEventId: r.toEventId,
+      relationType: r.relationType,
+      reason: r.reason,
+    })),
+    derived
+  );
+
+  const topoOrder = topologicalSort(sorted.map((e) => e.id), consistency.orderingEdges);
 
   const eventById = new Map(events.map((e) => [e.id, e]));
 
@@ -117,6 +131,7 @@ export async function GET() {
     totalEvents: events.length,
     derivedConstraints: derived.length,
     explicitConstraints: relations.length,
+    conflicts: consistency.conflicts.length,
     // Expose the full relation set for graph rendering
     relations: [
       ...relations.map((r) => ({

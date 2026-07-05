@@ -36,6 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: "/admin", label: "Übersicht" },
           { href: "/admin/extract", label: "KI-Extraktion" },
           { href: "/admin/review", label: "Review-Queue" },
+          { href: "/admin/consistency", label: "Konsistenz" },
           { href: "/admin/users", label: "Benutzer" },
         ].map((l) => (
           <Link

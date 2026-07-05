@@ -14,6 +14,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 
 - **Timeline mit Zoom** — topologisch geordneter Ereignisgraph über alle vier Zyklen; vier Zoomstufen von „Ären" (nur grosse Wendepunkte) bis „Leben" (inkl. Geburten/Tode), plus Charakter-Fokus
 - **Automatische Constraint-Ableitung** — die Timeline ordnet nicht nur nach den explizit überlieferten Relationen, sondern leitet logische Zwänge selbst ab: Geburt(C) liegt vor jedem Ereignis mit C, jedes Ereignis mit C vor Tod(C) („C tötet B" platziert also automatisch alle Taten von B vor diesem Kampf), und Eltern werden vor ihren Kindern geboren. Abgeleitete Kanten sind in Liste (⚙) und Graph (gestrichelt grün) gekennzeichnet; gegenseitige Tötungen (Oscar ⚔ Cairbre) bleiben durch eine Schutzregel zyklenfrei
+- **Konsistenz-Prüfung** (`/admin/consistency`) — Widersprüche zwischen Quellen-Relationen und abgeleiteten Zwängen erscheinen als Zyklen und werden als Konfliktliste gemeldet (beteiligte Events, kollidierende Kanten, Begründungen). Auflösungsregel: explizit gewinnt, die abgeleitete Kante wird aus der Ordnung genommen. Bewährungsprobe: Der §-weise erfasste Cath Maige Tuired (Seed `cmt-saga`) enthält den echten Widerspruch der Überlieferung — §35 erschlägt Miach, §123 lässt ihn am Brunnen Sláine heilen — und die Prüfung findet genau diesen einen Zyklus
 - **Timeline-Graph** — ReactFlow-Ansicht mit Zyklen-Ebenen, Zoomstufen, Charakter-Swimlanes und Fokus-Dimming (Events ohne die gewählten Charaktere treten zurück)
 - **Charakterprofile** — Eigenschaften, Epitheta, Gruppen, Artefakte, Quellenzitate, Vollständigkeits-Indikator
 - **Stammbaum-Graph** — interaktiver Familienstammbaum pro Charakter: Blutlinie + Nebenlinien, einstellbare Generationstiefe (2–6), kreuzungsarmes Barycenter-Layout, Klick refokussiert den Baum
@@ -23,7 +24,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 - **Login & Rollen** — Lesen ist öffentlich; Schreiben erfordert ein Konto mit Rechten (siehe unten)
 - **Review-Workflow** — Editor-Vorschläge landen in der Review-Queue und werden erst nach Freigabe sichtbar
 - **KI-Extraktion** — Sagentexte einfügen, Claude schlägt strukturierte Entitäten mit Originalzitaten vor (Admin)
-- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended` + `mythology-catalog`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **497 Charaktere, 201 Events, 369 Familienrelationen, 31 Artefakte, 37 Orte, 36 Quellen** (dazu ~150 automatisch abgeleitete Ordnungs-Constraints zur Laufzeit) — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti). Die Namenskataloge der Überlieferung sind vollständig inventarisiert: die fünfzig Frauen der Cessair, die Häuptlinge der Milesier-Flotte, die Königsrolle (Réim Rígraide) von Éremón bis Conn Cétchathach, die Musterung aus Da Dergas Halle, die Heerschau der Táin und die Fianna-Rollen — reine Namenskatalog-Einträge sind als `speculative` gekennzeichnet (nur namentlich bezeugt)
+- **Vollständiger Datensatz** — Seeds `mythology` + `mythology-extended` + `mythology-catalog`, Geschichte für Geschichte aus den Einzelsagen erarbeitet: **503 Charaktere, 213 Events, 373 Familienrelationen, 31 Artefakte, 37 Orte, 36 Quellen** (dazu ~165 automatisch abgeleitete Ordnungs-Constraints zur Laufzeit) — von den Landnahme-Genealogien des Lebor Gabála über sämtliche Furtkämpfe der Táin bis zu Buile Shuibhne und der ältesten Leprechaun-Erzählung (Echtra Fergusa maic Léti). Die Namenskataloge der Überlieferung sind vollständig inventarisiert: die fünfzig Frauen der Cessair, die Häuptlinge der Milesier-Flotte, die Königsrolle (Réim Rígraide) von Éremón bis Conn Cétchathach, die Musterung aus Da Dergas Halle, die Heerschau der Táin und die Fianna-Rollen — reine Namenskatalog-Einträge sind als `speculative` gekennzeichnet (nur namentlich bezeugt)
 
 ## Authentifizierung & Rollen
 
@@ -44,7 +45,7 @@ Das Grundkonzept ist auf andere Mythologien erweiterbar (griechisch, nordisch, e
 ```bash
 npm install
 cp env.local.example .env.local   # AUTH_SECRET setzen!
-npm run db:reset -- mythology mythology-extended mythology-catalog   # kompletter Datensatz
+npm run db:reset -- mythology mythology-extended mythology-catalog cmt-saga   # kompletter Datensatz
 npm run dev
 ```
 
@@ -55,7 +56,7 @@ App läuft auf [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run db:migrate                                 # Schema-Migrationen ausführen
 npm run db:seed                                    # verfügbare Seeds auflisten
-npm run db:reset -- mythology mythology-extended mythology-catalog   # kompletter Datensatz (empfohlen)
+npm run db:reset -- mythology mythology-extended mythology-catalog cmt-saga   # kompletter Datensatz (empfohlen)
 npm run db:seed -- core                            # kleiner Basisdatensatz
 npm run db:seed -- cmt-deep                        # Cath Maige Tuired Tiefendaten
 ```
