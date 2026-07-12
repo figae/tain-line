@@ -6,7 +6,6 @@
  *   npm run db:reset -- core        # reset + seed core data
  *   npm run db:reset -- core cmt-deep  # reset + multiple seeds
  */
-import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";

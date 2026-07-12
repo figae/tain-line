@@ -93,7 +93,7 @@ function FamilyNode({ data }: { data: FamilyNodeData }) {
 
         {/* Badges (focus + bloodline only) */}
         {data.role !== "lateral" && (
-          <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.3rem", flexWrap: "wrap", alignItems: "center" }}>
             {data.isDeity && (
               <span
                 style={{
@@ -111,6 +111,28 @@ function FamilyNode({ data }: { data: FamilyNodeData }) {
                 Gottheit
               </span>
             )}
+            {/* Klick auf den Knoten refokussiert den Baum — dieser Chip
+                führt stattdessen zum Charakterprofil */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/characters/${data.id}`);
+              }}
+              title="Zum Charakterprofil"
+              style={{
+                fontSize: "0.6rem",
+                padding: "1px 6px",
+                background: "transparent",
+                border: "1px solid var(--border)",
+                borderRadius: 2,
+                color: "var(--slate)",
+                fontFamily: "Cinzel, serif",
+                letterSpacing: "0.05em",
+                cursor: "pointer",
+              }}
+            >
+              Profil →
+            </button>
           </div>
         )}
       </div>

@@ -13,6 +13,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next-auth/react", () => ({
+  signOut: vi.fn(),
+}));
+
 import { usePathname } from "next/navigation";
 
 describe("Nav", () => {
@@ -23,10 +27,13 @@ describe("Nav", () => {
 
   it("renders all navigation links", () => {
     render(<Nav />);
+    // Links appear in desktop nav (mobile drawer is closed by default)
     expect(screen.getByText("Übersicht")).toBeInTheDocument();
     expect(screen.getByText("Timeline")).toBeInTheDocument();
     expect(screen.getByText("Charaktere")).toBeInTheDocument();
     expect(screen.getByText("Events")).toBeInTheDocument();
+    expect(screen.getByText("Artefakte")).toBeInTheDocument();
+    expect(screen.getByText("Orte")).toBeInTheDocument();
     expect(screen.getByText("Quellen")).toBeInTheDocument();
   });
 
@@ -34,23 +41,45 @@ describe("Nav", () => {
     vi.mocked(usePathname).mockReturnValue("/");
     render(<Nav />);
     const link = screen.getByText("Übersicht").closest("a");
-    // Active links get background var(--gold), inactive are transparent
     expect(link).toHaveAttribute("href", "/");
-    // The active style includes background: var(--gold)
-    expect(link).toHaveStyle({ background: "var(--gold)" });
+    expect(link?.className).toContain("nav-link-active");
   });
 
   it("marks Timeline as active when on /timeline", () => {
     vi.mocked(usePathname).mockReturnValue("/timeline");
     render(<Nav />);
     const link = screen.getByText("Timeline").closest("a");
-    expect(link).toHaveStyle({ background: "var(--gold)" });
+    expect(link?.className).toContain("nav-link-active");
   });
 
   it("does not mark Timeline as active on /", () => {
     vi.mocked(usePathname).mockReturnValue("/");
     render(<Nav />);
     const link = screen.getByText("Timeline").closest("a");
-    expect(link).toHaveStyle({ background: "transparent" });
+    expect(link?.className).not.toContain("nav-link-active");
+  });
+
+  it("shows login button when logged out", () => {
+    render(<Nav />);
+    expect(screen.getByText("Anmelden")).toBeInTheDocument();
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+  });
+
+  it("shows user chip and role for a logged-in editor", () => {
+    render(<Nav user={{ name: "Brigid", role: "editor" }} />);
+    expect(screen.getByText("Brigid")).toBeInTheDocument();
+    expect(screen.getByText("Editor")).toBeInTheDocument();
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+  });
+
+  it("shows the admin link only for admins", () => {
+    render(<Nav user={{ name: "Lugh", role: "admin" }} />);
+    // "Admin" appears both as the role badge and as the nav link — we
+    // specifically want the link to /admin
+    const adminLink = screen
+      .getAllByText("Admin")
+      .map((el) => el.closest("a"))
+      .find((a) => a?.getAttribute("href") === "/admin");
+    expect(adminLink).toBeTruthy();
   });
 });

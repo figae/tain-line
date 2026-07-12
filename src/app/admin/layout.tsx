@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session) redirect("/api/auth/signin");
+  if (!session?.user?.id) redirect("/login?callbackUrl=/admin");
+  if (session.user.role !== "admin") redirect("/?forbidden=1");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -35,6 +36,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: "/admin", label: "Übersicht" },
           { href: "/admin/extract", label: "KI-Extraktion" },
           { href: "/admin/review", label: "Review-Queue" },
+          { href: "/admin/consistency", label: "Konsistenz" },
+          { href: "/admin/users", label: "Benutzer" },
         ].map((l) => (
           <Link
             key={l.href}

@@ -7,6 +7,25 @@ import {
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 // ─────────────────────────────────────────────
+// USERS — authentication & role-based access
+//
+// Roles:
+//   admin  — full access: review queue, user management, direct writes
+//   editor — may propose data (lands in pending_review)
+//   viewer — read-only (same visibility as anonymous users)
+// ─────────────────────────────────────────────
+export const userRoles = ["admin", "editor", "viewer"] as const;
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role", { enum: userRoles }).notNull().default("viewer"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
+
+// ─────────────────────────────────────────────
 // SOURCES — every data point must have a source
 // ─────────────────────────────────────────────
 export const sources = sqliteTable("sources", {
@@ -248,6 +267,62 @@ export const eventRelations = sqliteTable("event_relations", {
 });
 
 // ─────────────────────────────────────────────
+// ARTIFACTS — legendary weapons, treasures, instruments
+//
+// Examples: the Four Treasures of the Tuatha Dé Danann
+// (Lia Fáil, Sword of Light, Spear of Lugh, Cauldron of
+// the Dagda), Gáe Bulg, Fragarach, the Dagda's harp.
+// ─────────────────────────────────────────────
+export const artifactTypes = [
+  "weapon",      // swords, spears, slings
+  "treasure",    // the Four Treasures, hoards
+  "vessel",      // cauldrons, cups, boats
+  "instrument",  // harps, horns
+  "garment",     // cloaks, mantles
+  "jewel",       // brooches, rings, torcs
+  "animal",      // legendary beasts treated as possessions (bulls, horses, hounds)
+  "other",
+] as const;
+
+export const artifacts = sqliteTable("artifacts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  altNames: text("alt_names"),
+  type: text("type", { enum: artifactTypes }).default("other"),
+  description: text("description"),
+  powers: text("powers"),
+  mythology: text("mythology").default("celtic-irish"),
+  sourceId: integer("source_id").references(() => sources.id),
+  status: text("status", { enum: ["draft", "pending_review", "approved", "rejected"] }).default("approved"),
+  sourceQuote: text("source_quote"),
+  proposedBy: text("proposed_by", { enum: ["human", "ai"] }).default("human"),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
+
+// Which characters are bound to an artifact, and how
+export const artifactCharacters = sqliteTable("artifact_characters", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  artifactId: integer("artifact_id").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
+  characterId: integer("character_id").notNull().references(() => characters.id, { onDelete: "cascade" }),
+  relationship: text("relationship", {
+    enum: ["owner", "wielder", "creator", "keeper", "seeker", "victim", "other"],
+  }).default("owner"),
+  notes: text("notes"),
+  sourceId: integer("source_id").references(() => sources.id),
+});
+
+// Artifacts appearing in an event
+export const eventArtifacts = sqliteTable("event_artifacts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  artifactId: integer("artifact_id").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
+  notes: text("notes"),
+  sourceId: integer("source_id").references(() => sources.id),
+});
+
+// ─────────────────────────────────────────────
 // TYPE EXPORTS
 // ─────────────────────────────────────────────
 export type Source = typeof sources.$inferSelect;
@@ -261,3 +336,7 @@ export type Place = typeof places.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type EventRelation = typeof eventRelations.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type Artifact = typeof artifacts.$inferSelect;
+export type NewArtifact = typeof artifacts.$inferInsert;

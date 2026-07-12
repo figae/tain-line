@@ -115,6 +115,49 @@ CREATE TABLE IF NOT EXISTS event_places (
   source_id INTEGER REFERENCES sources(id)
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  email         TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  role          TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('admin','editor','viewer')),
+  created_at    TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS artifacts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  name         TEXT NOT NULL,
+  alt_names    TEXT,
+  type         TEXT DEFAULT 'other' CHECK(type IN ('weapon','treasure','vessel','instrument','garment','jewel','animal','other')),
+  description  TEXT,
+  powers       TEXT,
+  mythology    TEXT DEFAULT 'celtic-irish',
+  source_id    INTEGER REFERENCES sources(id),
+  status       TEXT DEFAULT 'approved' CHECK(status IN ('draft','pending_review','approved','rejected')),
+  source_quote TEXT,
+  proposed_by  TEXT DEFAULT 'human' CHECK(proposed_by IN ('human','ai')),
+  reviewed_at  TEXT,
+  review_notes TEXT,
+  created_at   TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS artifact_characters (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  artifact_id  INTEGER NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+  character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  relationship TEXT DEFAULT 'owner' CHECK(relationship IN ('owner','wielder','creator','keeper','seeker','victim','other')),
+  notes        TEXT,
+  source_id    INTEGER REFERENCES sources(id)
+);
+
+CREATE TABLE IF NOT EXISTS event_artifacts (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id    INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  artifact_id INTEGER NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+  notes       TEXT,
+  source_id   INTEGER REFERENCES sources(id)
+);
+
 CREATE TABLE IF NOT EXISTS event_relations (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   from_event_id  INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
@@ -126,6 +169,18 @@ CREATE TABLE IF NOT EXISTS event_relations (
   reason         TEXT,
   source_id      INTEGER REFERENCES sources(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_characters_name        ON characters(name);
+CREATE INDEX IF NOT EXISTS idx_events_cycle           ON events(cycle);
+CREATE INDEX IF NOT EXISTS idx_events_type            ON events(event_type);
+CREATE INDEX IF NOT EXISTS idx_event_relations_from   ON event_relations(from_event_id);
+CREATE INDEX IF NOT EXISTS idx_event_relations_to     ON event_relations(to_event_id);
+CREATE INDEX IF NOT EXISTS idx_event_characters_event ON event_characters(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_characters_char  ON event_characters(character_id);
+CREATE INDEX IF NOT EXISTS idx_family_relations_from  ON family_relations(from_character_id);
+CREATE INDEX IF NOT EXISTS idx_family_relations_to    ON family_relations(to_character_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_chars_art     ON artifact_characters(artifact_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_chars_char    ON artifact_characters(character_id);
 
 `;
 
@@ -179,6 +234,11 @@ for (const table of mythologyTables) {
     }
   }
 }
+
+// Status indexes — created after the ALTER TABLE section because the
+// status columns are retrofitted onto pre-existing databases above.
+sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_characters_status ON characters(status);`);
+sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_events_status     ON events(status);`);
 
 console.log("✓ Database schema created/updated at", DB_PATH);
 sqlite.close();

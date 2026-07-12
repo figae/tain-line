@@ -42,12 +42,13 @@ export default function ReviewPage() {
   const [rejectId, setRejectId] = useState<{ type: EntityType; id: number } | null>(null);
   const [rejectNotes, setRejectNotes] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch("/api/admin/review");
-    const d = await res.json() as ReviewData;
-    setData(d);
-    setLoading(false);
+  const load = useCallback(() => {
+    fetch("/api/admin/review")
+      .then((r) => r.json())
+      .then((d: ReviewData) => {
+        setData(d);
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -195,7 +196,7 @@ export default function ReviewPage() {
                       fontSize: "0.78rem",
                       fontStyle: "italic",
                     }}>
-                      „{item.sourceQuote}"
+                      &bdquo;{item.sourceQuote}&ldquo;
                     </blockquote>
                   )}
                   <div style={{ marginTop: "0.4rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>

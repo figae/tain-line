@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { safeParseJson } from "@/lib/json";
+import {
+  requireRole,
+  isGuardError,
+  asTrimmedString,
+  asOptionalString,
+  asEnum,
+  asOptionalId,
+  asStringArray,
+} from "@/lib/api-guard";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -36,23 +45,36 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { name, altNames, gender, description, epithet, isDeity, sourceId } = body;
+  const session = await requireRole("editor");
+  if (isGuardError(session)) return session;
 
-  if (!name || typeof name !== "string") {
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Ungültiger Request-Body." }, { status: 400 });
+  }
+
+  const name = asTrimmedString(body.name, 200);
+  if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
+
+  const altNames = asStringArray(body.altNames);
 
   const result = await db
     .insert(schema.characters)
     .values({
       name,
-      altNames: altNames ? JSON.stringify(altNames) : null,
-      gender: gender ?? "unknown",
-      description,
-      epithet,
-      isDeity: isDeity ?? false,
-      sourceId,
+      altNames: altNames.length > 0 ? JSON.stringify(altNames) : null,
+      gender: asEnum(body.gender, ["male", "female", "other", "unknown"] as const, "unknown"),
+      description: asOptionalString(body.description),
+      epithet: asOptionalString(body.epithet, 300),
+      isDeity: body.isDeity === true,
+      sourceId: asOptionalId(body.sourceId),
+      sourceQuote: asOptionalString(body.sourceQuote),
+      // Editors propose — only admins write directly into the approved dataset
+      status: session.role === "admin" ? "approved" : "pending_review",
     })
     .returning();
 

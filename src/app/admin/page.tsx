@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 async function getPendingCounts() {
   const pending = (t: { status: ReturnType<typeof eq> }) => t;

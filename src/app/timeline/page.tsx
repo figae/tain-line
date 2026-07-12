@@ -13,7 +13,13 @@ interface TimelineEvent {
   approximateEra: string | null;
   position: number;
   characters: { characterId: number; name: string; role: string }[];
-  relations: { eventId: number; relationType: string; direction: "before" | "after" }[];
+  relations: {
+    eventId: number;
+    relationType: string;
+    direction: "before" | "after";
+    derived?: boolean;
+    reason?: string | null;
+  }[];
 }
 
 const CYCLE_COLOR: Record<string, string> = {
@@ -52,16 +58,46 @@ const REL_TYPE_LABEL: Record<string, string> = {
   meets:    "gefolgt von",
 };
 
+// ── Zoom levels: from coarse era view down to full lifecycle detail ─────
+const ZOOM_LEVELS = [
+  { key: 1, label: "Ären",       hint: "Nur die großen Wendepunkte: Schlachten, Herrschaften, Landnahmen" },
+  { key: 2, label: "Ereignisse", hint: "Alle Hauptereignisse ohne Teilereignisse" },
+  { key: 3, label: "Details",    hint: "Alle Ereignisse inklusive Teilereignissen" },
+  { key: 4, label: "Leben",      hint: "Zusätzlich Geburten und Tode" },
+] as const;
+
+const MAJOR_TYPES = new Set(["battle", "reign", "journey"]);
+
+function visibleAtZoom(e: TimelineEvent, zoom: number): boolean {
+  const isLifecycle = e.eventType === "birth" || e.eventType === "death";
+  switch (zoom) {
+    case 1: return !isLifecycle && e.parentEventId === null && MAJOR_TYPES.has(e.eventType ?? "");
+    case 2: return !isLifecycle && e.parentEventId === null;
+    case 3: return !isLifecycle;
+    default: return true;
+  }
+}
+
 export default function TimelinePage() {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
-  const [hideLifecycle, setHideLifecycle] = useState(true);
+  const [zoom, setZoom] = useState<number>(2);
+  const [focusChar, setFocusChar] = useState<number | null>(null);
+  const [charSearch, setCharSearch] = useState("");
+  const [constraintStats, setConstraintStats] = useState<{ explicit: number; derived: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/timeline")
       .then((r) => r.json())
-      .then((d) => { setEvents(d.timeline); setLoading(false); });
+      .then((d) => {
+        setEvents(d.timeline);
+        setConstraintStats({
+          explicit: d.explicitConstraints ?? 0,
+          derived: d.derivedConstraints ?? 0,
+        });
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -75,9 +111,28 @@ export default function TimelinePage() {
     );
   }
 
-  const visibleEvents = hideLifecycle
-    ? events.filter((e) => e.eventType !== "birth" && e.eventType !== "death")
-    : events;
+  // All characters appearing in the timeline (for the focus picker)
+  const charCounts = new Map<number, { name: string; count: number }>();
+  for (const e of events) {
+    for (const c of e.characters) {
+      const entry = charCounts.get(c.characterId) ?? { name: c.name, count: 0 };
+      entry.count += 1;
+      charCounts.set(c.characterId, entry);
+    }
+  }
+  const focusCharName = focusChar !== null ? charCounts.get(focusChar)?.name : null;
+  const searchResults = charSearch.length > 0
+    ? Array.from(charCounts.entries())
+        .filter(([, v]) => v.name.toLowerCase().includes(charSearch.toLowerCase()))
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 8)
+    : [];
+
+  // Character focus overrides zoom: show that character's full story,
+  // including birth and death, regardless of the current zoom level.
+  const visibleEvents = focusChar !== null
+    ? events.filter((e) => e.characters.some((c) => c.characterId === focusChar))
+    : events.filter((e) => visibleAtZoom(e, zoom));
 
   const cycleGroups = visibleEvents.reduce<Record<string, TimelineEvent[]>>((acc, e) => {
     const key = e.cycle ?? "other";
@@ -131,34 +186,91 @@ export default function TimelinePage() {
         </div>
 
         <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Timeline</h1>
-        <p style={{ color: "var(--mist)", margin: "0 0 1rem" }}>
+        <p style={{ color: "var(--mist)", margin: "0 0 0.35rem" }}>
           Topologisch geordnete Ereignisse — abgeleitet aus logischen Abhängigkeiten zwischen den Mythen.
           {" "}
           <span style={{ color: "var(--slate)", fontSize: "0.9rem" }}>
-            ({visibleEvents.length}{hideLifecycle ? ` von ${events.length}` : ""} Events)
+            ({visibleEvents.length} von {events.length} Events)
           </span>
         </p>
+        {constraintStats && (
+          <p style={{ color: "var(--slate)", fontSize: "0.8rem", margin: "0 0 1rem" }}>
+            {constraintStats.explicit} Relationen aus den Quellen ·{" "}
+            <span style={{ color: "var(--sage)" }}>
+              ⚙ {constraintStats.derived} automatisch abgeleitet
+            </span>{" "}
+            (Geburt&nbsp;→ Beteiligung&nbsp;→ Tod, Eltern vor Kindern)
+          </p>
+        )}
 
         {/* Controls */}
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-          {/* Lifecycle toggle */}
-          <button
-            onClick={() => setHideLifecycle((v) => !v)}
-            style={{
-              padding: "5px 14px",
-              background: hideLifecycle ? "var(--peat)" : "rgba(200,145,58,0.2)",
-              color: hideLifecycle ? "var(--slate)" : "var(--amber)",
-              border: `1px solid ${hideLifecycle ? "var(--border)" : "var(--amber)"}`,
-              borderRadius: "2px",
-              cursor: "pointer",
-              fontFamily: "Cinzel, serif",
-              fontSize: "0.7rem",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-            }}
-          >
-            {hideLifecycle ? "✦✝ Lebensdaten einblenden" : "✦✝ Lebensdaten ausblenden"}
-          </button>
+          {/* Zoom: coarse → detailed */}
+          <div className="zoom-control" role="group" aria-label="Detailgrad">
+            {ZOOM_LEVELS.map((z) => (
+              <button
+                key={z.key}
+                title={z.hint}
+                onClick={() => { setZoom(z.key); setFocusChar(null); }}
+                className={`zoom-step${zoom === z.key && focusChar === null ? " zoom-step-active" : ""}`}
+              >
+                {z.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Character focus */}
+          <div style={{ position: "relative" }}>
+            {focusChar !== null ? (
+              <button
+                onClick={() => setFocusChar(null)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                  padding: "5px 12px",
+                  background: "rgba(200,145,58,0.2)", color: "var(--amber)",
+                  border: "1px solid var(--amber)", borderRadius: "2px",
+                  cursor: "pointer", fontFamily: "Cinzel, serif",
+                  fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase",
+                }}
+              >
+                ◉ Fokus: {focusCharName} ✕
+              </button>
+            ) : (
+              <input
+                type="text"
+                placeholder="◉ Charakter fokussieren …"
+                value={charSearch}
+                onChange={(e) => setCharSearch(e.target.value)}
+                style={{
+                  background: "var(--peat)", border: "1px solid var(--border)",
+                  borderRadius: 2, color: "var(--mist)", fontSize: "0.85rem",
+                  padding: "5px 12px", width: 220,
+                }}
+              />
+            )}
+            {searchResults.length > 0 && focusChar === null && (
+              <div style={{
+                position: "absolute", top: "100%", left: 0, right: 0,
+                background: "var(--stone)", border: "1px solid var(--border-bright)",
+                borderRadius: 2, zIndex: 100, maxHeight: 240, overflowY: "auto",
+              }}>
+                {searchResults.map(([id, v]) => (
+                  <button
+                    key={id}
+                    onClick={() => { setFocusChar(id); setCharSearch(""); }}
+                    style={{
+                      display: "flex", justifyContent: "space-between", width: "100%",
+                      padding: "6px 10px", cursor: "pointer", background: "none",
+                      border: "none", color: "var(--mist)", fontSize: "0.85rem", textAlign: "left",
+                    }}
+                  >
+                    <span>{v.name}</span>
+                    <span style={{ color: "var(--slate)", fontSize: "0.75rem" }}>{v.count} Events</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Cycle legend */}
           {cycleOrder.filter((c) => cycleGroups[c]?.length > 0).map((c) => (
@@ -349,9 +461,10 @@ export default function TimelinePage() {
                                 const rel = selectedEvent?.relations.find((r) => r.eventId === e.id);
                                 if (!rel) return "verknüpft";
                                 const label = REL_TYPE_LABEL[rel.relationType] ?? rel.relationType;
+                                const gear = rel.derived ? "⚙ " : "";
                                 return rel.direction === "before"
-                                  ? `← ${label}`
-                                  : `${label} →`;
+                                  ? `← ${gear}${label}`
+                                  : `${gear}${label} →`;
                               })()}
                             </span>
                           )}
@@ -421,23 +534,30 @@ export default function TimelinePage() {
                             {/* Show related events */}
                             {e.relations.length > 0 && (
                               <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                                {e.relations.slice(0, 4).map((r) => {
+                                {e.relations.slice(0, 6).map((r, ri) => {
                                   const relEvent = events.find((ev) => ev.id === r.eventId);
                                   if (!relEvent) return null;
                                   return (
                                     <span
-                                      key={r.eventId}
+                                      key={`${r.eventId}-${ri}`}
+                                      title={r.derived ? `Automatisch abgeleitet: ${r.reason ?? ""}` : r.reason ?? undefined}
                                       style={{
                                         fontSize: "0.7rem",
-                                        color: "var(--slate)",
+                                        color: r.derived ? "var(--sage)" : "var(--slate)",
                                         fontStyle: "italic",
                                       }}
                                     >
                                       {r.direction === "before" ? "← " : "→ "}
+                                      {r.derived ? "⚙ " : ""}
                                       {REL_TYPE_LABEL[r.relationType] ?? r.relationType}: {relEvent.name}
                                     </span>
                                   );
                                 })}
+                                {e.relations.some((r) => r.derived) && (
+                                  <span style={{ fontSize: "0.65rem", color: "var(--sage)", fontFamily: "Cinzel, serif", letterSpacing: "0.05em" }}>
+                                    ⚙ = automatisch abgeleitet
+                                  </span>
+                                )}
                               </div>
                             )}
 

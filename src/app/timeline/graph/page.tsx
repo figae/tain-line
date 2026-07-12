@@ -35,6 +35,7 @@ interface Relation {
   toEventId: number;
   relationType: string;
   confidence: string;
+  derived?: boolean;
 }
 
 interface Character {
@@ -194,6 +195,7 @@ export default function TimelineGraphPage() {
 
   const [swimlaneCharIds, setSwimlaneCharIds] = useState<number[]>([]);
   const [charSearch, setCharSearch]           = useState("");
+  const [zoom, setZoom]                       = useState(2);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -232,11 +234,20 @@ export default function TimelineGraphPage() {
   useEffect(() => {
     if (loading) return;
 
-    // Main timeline: narrative events only (no birth/death)
-    const mainEvents = allEvents.filter(
-      (e) => e.eventType !== "birth" && e.eventType !== "death"
-    );
+    // Main timeline: narrative events only (no birth/death), filtered by
+    // zoom level: 1 = only major turning points, 2 = top-level events,
+    // 3 = everything including sub-events.
+    const MAJOR_TYPES = new Set(["battle", "reign", "journey"]);
+    const mainEvents = allEvents
+      .filter((e) => e.eventType !== "birth" && e.eventType !== "death")
+      .filter((e) => zoom >= 3 || e.parentEventId === null)
+      .filter((e) => zoom >= 2 || MAJOR_TYPES.has(e.eventType ?? ""));
     const mainIds = new Set(mainEvents.map((e) => e.id));
+
+    // With swimlane characters active, events they don't take part in
+    // fade back so their storyline stands out.
+    const hasFocus = swimlaneCharIds.length > 0;
+    const focusGroups = swimlaneCharIds.map((id) => [id]);
 
     const posCount: Record<string, number> = {};
     let maxX = 0;
@@ -249,11 +260,16 @@ export default function TimelineGraphPage() {
       const x = e.position * X_SPACING;
       const y = cycleY + slot * Y_JITTER;
       if (x > maxX) maxX = x;
+      const participates = e.characters.some((c) => swimlaneCharIds.includes(c.characterId));
       return {
         id:   String(e.id),
         type: "eventNode",
         position: { x, y },
-        data: { event: e, focusCharIds: [], dimmed: false } as EventNodeData,
+        data: {
+          event: e,
+          focusCharIds: focusGroups,
+          dimmed: hasFocus && !participates,
+        } as EventNodeData,
       };
     });
 
@@ -269,10 +285,20 @@ export default function TimelineGraphPage() {
       focusable:  false,
     }));
 
-    // Main timeline edges
+    // Main timeline edges — derived constraints render as thin dashed
+    // sage lines so the machine-inferred ordering is distinguishable
+    // from what the tales state explicitly.
     const mainEdges: Edge[] = allRelations
       .filter((r) => mainIds.has(r.fromEventId) && mainIds.has(r.toEventId))
       .map((r) => {
+        if (r.derived) {
+          return {
+            id:     `d-${r.fromEventId}-${r.toEventId}`,
+            source: String(r.fromEventId),
+            target: String(r.toEventId),
+            style:  { stroke: "#6b8a55", strokeWidth: 1, strokeDasharray: "2 6", opacity: 0.45 },
+          };
+        }
         const style      = REL_EDGE_STYLE[r.relationType] ?? REL_EDGE_STYLE.before;
         const speculative = r.confidence === "speculative";
         return {
@@ -365,7 +391,7 @@ export default function TimelineGraphPage() {
 
     setNodes([...mainNodes, ...cycleLabels, ...swimNodes]);
     setEdges([...mainEdges, ...swimEdges]);
-  }, [allEvents, allRelations, characters, swimlaneCharIds, loading, removeChar, setNodes, setEdges]);
+  }, [allEvents, allRelations, characters, swimlaneCharIds, zoom, loading, removeChar, setNodes, setEdges]);
 
   if (loading) {
     return (
@@ -411,6 +437,24 @@ export default function TimelineGraphPage() {
             letterSpacing: "0.12em", textTransform: "uppercase",
           }}>
             Graph
+          </div>
+
+          {/* Zoom: grob → detailliert */}
+          <div className="zoom-control" role="group" aria-label="Detailgrad">
+            {[
+              { key: 1, label: "Ären",       hint: "Nur Schlachten, Herrschaften, Landnahmen" },
+              { key: 2, label: "Ereignisse", hint: "Alle Hauptereignisse" },
+              { key: 3, label: "Details",    hint: "Inklusive Teilereignissen" },
+            ].map((z) => (
+              <button
+                key={z.key}
+                title={z.hint}
+                onClick={() => setZoom(z.key)}
+                className={`zoom-step${zoom === z.key ? " zoom-step-active" : ""}`}
+              >
+                {z.label}
+              </button>
+            ))}
           </div>
 
           <div style={{ flex: 1 }} />
@@ -505,6 +549,15 @@ export default function TimelineGraphPage() {
               </span>
             </div>
           ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <div style={{ width: 24, borderTop: "2px dashed #6b8a55", opacity: 0.6 }} />
+            <span style={{
+              fontSize: "0.65rem", color: "var(--sage)",
+              fontFamily: "Cinzel, serif", letterSpacing: "0.08em",
+            }}>
+              ⚙ abgeleitet
+            </span>
+          </div>
           <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1rem", display: "flex", gap: "0.75rem" }}>
             {cycleOrder.map((c) => (
               <div key={c} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
